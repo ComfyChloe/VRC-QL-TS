@@ -28,4 +28,13 @@ icons/
 .vscode
 package-lock.json
 dist/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+target/
+
+# One-time scripts
+make-icons.ps1
+
 out/

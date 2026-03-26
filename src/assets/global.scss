@@ -1,0 +1,352 @@
+// ─────────────────────────────────────────────────────────
+//  global.scss — single style entry point, imported in main.ts
+//
+//  Defines :root CSS custom properties (all driven from
+//  SCSS tokens so they stay in sync) and universal
+//  component classes used throughout the entire app.
+//
+//  THEMING RULE: Every interactive element MUST use one of
+//  the universal classes below. Never add one-off button or
+//  form colours in component files — use the classes here
+//  so the accent colour picker affects the whole app.
+// ─────────────────────────────────────────────────────────
+
+// ── CSS Custom Properties ──────────────────────────────────
+:root {
+  --color-bg-base:     #{$color-bg-base};
+  --color-bg-surface:  #{$color-bg-surface};
+  --color-bg-elevated: #{$color-bg-elevated};
+  --color-bg-overlay:  #{$color-bg-overlay};
+  --color-text-primary:   #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-text-muted:     #{$color-text-muted};
+  --color-text-inverse:   #{$color-text-inverse};
+  --color-accent:        #{$color-accent};
+  --color-accent-hover:  #{$color-accent-hover};
+  --color-accent-active: #{$color-accent-active};
+  --color-accent-subtle: rgba(79, 140, 255, 0.14);
+  --color-success:        #{$color-success};
+  --color-success-subtle: rgba(52, 211, 153, 0.12);
+  --color-warning:        #{$color-warning};
+  --color-warning-subtle: rgba(251, 191, 36, 0.12);
+  --color-danger:         #{$color-danger};
+  --color-danger-subtle:  rgba(248, 113, 113, 0.12);
+  --color-info:           #{$color-info};
+  --color-info-subtle:    rgba(96, 165, 250, 0.12);
+  --color-border:       #{$color-border};
+  --color-border-hover: #{$color-border-hover};
+  --color-border-focus: var(--color-accent);
+  --radius-sm:   #{$radius-sm};
+  --radius-md:   #{$radius-md};
+  --radius-lg:   #{$radius-lg};
+  --radius-full: #{$radius-full};
+  --sidebar-width: #{$sidebar-width};
+  --header-height: #{$header-height};
+}
+
+// ── Reset ───────────────────────────────────────────────────
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html, body, #app {
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  font-size: $font-size-base;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; }
+input, textarea, select { font-family: inherit; }
+
+// ── Universal Button Classes ────────────────────────────────
+// All button variants share .btn as a base. Add one modifier.
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: $font-size-sm;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  user-select: none;
+  white-space: nowrap;
+  text-decoration: none;
+  line-height: 1.4;
+  &:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+  &.btn-sm {
+    padding: $space-1 $space-3;
+    font-size: $font-size-xs;
+  }
+  &.btn-wide { width: 100%; }
+}
+
+// Primary — uses the live --color-accent var; changes with user's colour pick
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent);
+  font-weight: 700;
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+  &:active:not(:disabled) {
+    background: var(--color-accent-active);
+    border-color: var(--color-accent-active);
+  }
+}
+
+// Danger
+.btn-danger {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  &:hover:not(:disabled) { background: var(--color-danger-subtle); }
+}
+
+// Ghost — outlined accent on hover
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  &:hover:not(:disabled) {
+    color: var(--color-text-primary);
+    border-color: var(--color-border-hover);
+    background: var(--color-bg-overlay);
+  }
+}
+
+// Success
+.btn-success {
+  background: var(--color-success);
+  color: var(--color-bg-base);
+  border-color: var(--color-success);
+  &:hover:not(:disabled) { opacity: 0.85; }
+}
+
+// ── Universal Input / Form ──────────────────────────────────
+.input {
+  width: 100%;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: $space-2 $space-3;
+  font-size: $font-size-sm;
+  transition: border-color 0.15s;
+  &:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+  }
+  &::placeholder { color: var(--color-text-muted); }
+  &[type="number"] { appearance: textfield; }
+  &[type="color"] {
+    padding: 2px $space-2;
+    height: 32px;
+    cursor: pointer;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 60px;
+}
+
+// ── Cards ───────────────────────────────────────────────────
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: $space-4;
+}
+.card-elevated { background: var(--color-bg-surface); }
+
+// ── Badge ───────────────────────────────────────────────────
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px $space-2;
+  border-radius: var(--radius-sm);
+  font-size: $font-size-xs;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+.badge-success { background: var(--color-success-subtle); color: var(--color-success); }
+.badge-danger  { background: var(--color-danger-subtle);  color: var(--color-danger);  }
+.badge-warning { background: var(--color-warning-subtle); color: var(--color-warning); }
+.badge-neutral { background: var(--color-bg-overlay); color: var(--color-text-secondary); }
+
+// ── Checkbox Row ────────────────────────────────────────────
+// Standard checkbox + label, uses accent colour when checked
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+  user-select: none;
+  input[type="checkbox"] {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--color-border);
+    border-radius: $radius-sm;
+    background: var(--color-bg-base);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+    &:checked {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8' viewBox='0 0 10 8'%3E%3Cpath d='M1 4l3 3 5-6' stroke='%230f0f1a' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    &:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+  }
+  span { font-size: $font-size-sm; color: var(--color-text-primary); }
+}
+
+// ── Radio Row ───────────────────────────────────────────────
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+  user-select: none;
+  input[type="radio"] {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-bg-base);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+    &:checked {
+      border-color: var(--color-accent);
+      border-width: 4px;
+    }
+  }
+  span { font-size: $font-size-sm; color: var(--color-text-primary); }
+}
+
+// ── Form Layout Helpers ─────────────────────────────────────
+.field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+.field-label {
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.inline-fields {
+  display: flex;
+  gap: $space-3;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  > .field-stack { flex: 1; min-width: 80px; }
+}
+
+// ── Typography & Panel Helpers ──────────────────────────────
+.panel-title {
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: $space-2;
+}
+.panel-actions {
+  display: flex;
+  gap: $space-2;
+  margin-top: $space-4;
+  flex-wrap: wrap;
+}
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $space-4;
+  margin-bottom: $space-5;
+  h1 { font-size: $font-size-xl; font-weight: 700; }
+  .page-sub { font-size: $font-size-sm; color: var(--color-text-secondary); }
+}
+
+// ── Collapsible Section Toggle ──────────────────────────────
+.section-body {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+// ── Divider ─────────────────────────────────────────────────
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: $space-4 0;
+}
+
+// ── Text Utilities ───────────────────────────────────────────
+.text-sm        { font-size: $font-size-sm; }
+.text-xs        { font-size: $font-size-xs; }
+.text-secondary { color: var(--color-text-secondary); }
+.text-muted     { color: var(--color-text-muted); }
+.text-accent    { color: var(--color-accent); }
+.text-danger    { color: var(--color-danger); }
+.text-success   { color: var(--color-success); }
+.text-warning   { color: var(--color-warning); }
+
+// ── Scrollbar ───────────────────────────────────────────────
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-border-hover); }
+
+// ── Status / Info Banner ─────────────────────────────────────
+.info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border-radius: var(--radius-sm);
+  font-size: $font-size-sm;
+  background: var(--color-info-subtle);
+  color: var(--color-info);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+.warn-banner {
+  @extend .info-banner;
+  background: var(--color-warning-subtle);
+  color: var(--color-warning);
+  border-color: rgba(251, 191, 36, 0.2);
+}
+.error-banner {
+  @extend .info-banner;
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+  border-color: rgba(248, 113, 113, 0.2);
+}

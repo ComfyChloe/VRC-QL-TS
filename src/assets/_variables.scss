@@ -1,0 +1,62 @@
+// ─────────────────────────────────────────────────────────
+//  _variables.scss — SCSS compile-time tokens
+//  Auto-injected into every <style lang="scss"> block via
+//  vite.config.ts preprocessorOptions.
+//
+//  These are SCSS compile-time values. Runtime theme
+//  overrides (accent colour picker) work by setting the
+//  corresponding CSS custom properties on :root via JS.
+// ─────────────────────────────────────────────────────────
+
+// Surfaces
+$color-bg-base:     #161616;
+$color-bg-surface:  #202020;
+$color-bg-elevated: #1b1b1b;
+$color-bg-overlay:  #252525;
+
+// Text
+$color-text-primary:   #e3e3e3;
+$color-text-secondary: #b2b2b2;
+$color-text-muted:     #7c7c7c;
+$color-text-inverse:   #0f0f0f;
+
+// Accent — default purple, overridable at runtime
+$color-accent:        #4f8cff;
+$color-accent-hover:  #76a6ff;
+$color-accent-active: #3d73d4;
+
+// Semantic
+$color-success: #34d399;
+$color-warning: #fbbf24;
+$color-danger:  #f87171;
+$color-info:    #60a5fa;
+
+// Borders
+$color-border:       #303030;
+$color-border-hover: #454545;
+
+// Layout
+$sidebar-width: 136px;
+$header-height: 44px;
+
+// Spacing (4px base grid)
+$space-1:  4px;
+$space-2:  8px;
+$space-3:  12px;
+$space-4:  16px;
+$space-5:  20px;
+$space-6:  24px;
+$space-8:  32px;
+
+// Border radii
+$radius-sm:   0px;
+$radius-md:   0px;
+$radius-lg:   0px;
+$radius-full: 9999px;
+
+// Typography
+$font-size-xs:   0.72rem;
+$font-size-sm:   0.82rem;
+$font-size-base: 0.92rem;
+$font-size-lg:   1.05rem;
+$font-size-xl:   1.25rem;
