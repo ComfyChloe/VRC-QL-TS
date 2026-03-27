@@ -1,20 +1,28 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { appConfig, saveConfig, applyAccentColor } from '../lib/config'
+import { appConfig, saveConfig, applyTheme } from '../lib/config'
 
 const DEFAULT_ACCENT = '#7c6aef'
+const DEFAULT_BACKGROUND = '#161616'
+const DEFAULT_SURFACE = '#202020'
 
 // Keep a local copy so input is responsive; persist on change
 const accentColor = ref(appConfig.value.theme.accentColor)
+const backgroundColor = ref(appConfig.value.theme.backgroundColor)
+const surfaceColor = ref(appConfig.value.theme.surfaceColor)
 
-watch(accentColor, async (hex) => {
-  appConfig.value.theme.accentColor = hex
-  applyAccentColor(hex)
+watch([accentColor, backgroundColor, surfaceColor], async ([accent, background, surface]) => {
+  appConfig.value.theme.accentColor = accent
+  appConfig.value.theme.backgroundColor = background
+  appConfig.value.theme.surfaceColor = surface
+  await applyTheme(appConfig.value.theme)
   await saveConfig()
 })
 
-async function resetAccent() {
+async function resetTheme() {
   accentColor.value = DEFAULT_ACCENT
+  backgroundColor.value = DEFAULT_BACKGROUND
+  surfaceColor.value = DEFAULT_SURFACE
 }
 
 const rememberSize    = ref(appConfig.value.window.rememberSize)
@@ -42,7 +50,29 @@ watch([rememberSize, layoutColumns], async ([rs, lc]) => {
         <div class="colour-controls">
           <input class="colour-swatch" type="color" v-model="accentColor" />
           <span class="colour-hex text-sm text-secondary">{{ accentColor }}</span>
-          <button class="btn btn-ghost btn-sm" type="button" @click="resetAccent">Reset</button>
+        </div>
+      </div>
+      <hr class="divider" />
+      <div class="setting-row">
+        <div class="field-stack">
+          <span class="field-label">Background Colour</span>
+          <span class="text-xs text-muted">Main app background and native window background</span>
+        </div>
+        <div class="colour-controls">
+          <input class="colour-swatch" type="color" v-model="backgroundColor" />
+          <span class="colour-hex text-sm text-secondary">{{ backgroundColor }}</span>
+        </div>
+      </div>
+      <hr class="divider" />
+      <div class="setting-row">
+        <div class="field-stack">
+          <span class="field-label">Secondary Colour</span>
+          <span class="text-xs text-muted">Used for cards, sidebar, and secondary surfaces</span>
+        </div>
+        <div class="colour-controls">
+          <input class="colour-swatch" type="color" v-model="surfaceColor" />
+          <span class="colour-hex text-sm text-secondary">{{ surfaceColor }}</span>
+          <button class="btn btn-ghost btn-sm" type="button" @click="resetTheme">Reset</button>
         </div>
       </div>
     </section>

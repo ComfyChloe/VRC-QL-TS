@@ -3,13 +3,13 @@ import { computed, ref, watch } from 'vue'
 import LaunchOptionsPanel from '../components/LaunchOptionsPanel.vue'
 import InstanceInfoPanel from '../components/InstanceInfoPanel.vue'
 import type { LaunchOptions } from '../components/LaunchOptionsPanel.vue'
-import { appConfig } from '../lib/config'
+import { appConfig, saveConfig } from '../lib/config'
 import { useProfiles } from '../composables/useProfiles'
 import { useLauncher, type LaunchQueueEntry, type LaunchRuntimeSettings } from '../composables/useLauncher'
 import type { InstanceConfig, LaunchProfile } from '../lib/types'
 import { defaultProfile } from '../lib/types'
 
-const { profiles, toggleEnabled, moveProfile, updateProfile } = useProfiles()
+const { profiles, toggleEnabled, moveProfile, updateProfile, toggleGlobalOptions, setProfileVr, setProfileInstall } = useProfiles()
 const { launchProfile, launchSelected } = useLauncher()
 const runtimeSettings = ref<Record<string, LaunchRuntimeSettings>>({})
 const selectedId = ref<string | undefined>(undefined)
@@ -41,7 +41,11 @@ const selectedProfile = computed<LaunchProfile | null>(() =>
   profiles.value.find(profile => profile.id === selectedId.value) ?? null
 )
 
-watch(selectedProfile, (profile) => {
+watch(() => ({
+  id: selectedProfile.value?.id,
+  updatedAt: selectedProfile.value?.updatedAt
+}), () => {
+  const profile = selectedProfile.value
   syncSelectedEditor = true
   selectedEditor.value = profile ? JSON.parse(JSON.stringify(profile)) as LaunchProfile : null
   syncSelectedEditor = false
@@ -65,8 +69,32 @@ const blankOptions = computed<LaunchOptions>(() => {
 })
 
 const autoLayout = ref(false)
+const editingGlobal = ref(false)
 const launchError = ref('')
 const launchInfo  = ref('')
+
+const globalOptions = computed<LaunchOptions>(() => {
+  const g = appConfig.value.globalOptions
+  return {
+    debug: g.debug, creator: g.creator, performance: g.performance,
+    ik: g.ik, system: g.system, display: g.display
+  }
+})
+
+async function updateGlobalOptions(value: LaunchOptions) {
+  appConfig.value.globalOptions = { ...appConfig.value.globalOptions, ...value }
+  await saveConfig()
+}
+
+function effectiveProfile(profile: typeof profiles.value[number]) {
+  if (!profile.useGlobalOptions) return profile
+  const g = appConfig.value.globalOptions
+  return {
+    ...profile,
+    debug: g.debug, creator: g.creator, performance: g.performance,
+    ik: g.ik, system: g.system, display: g.display
+  }
+}
 
 const selectedLaunchOptions = computed<LaunchOptions>(() => {
   if (!selectedEditor.value) return blankOptions.value
@@ -92,6 +120,12 @@ function patchRuntime(profileId: string, patch: Partial<LaunchRuntimeSettings>) 
     ...(runtimeSettings.value[profileId] ?? { installId: appConfig.value.installs[0]?.id ?? '', vr: true }),
     ...patch
   }
+  if (patch.installId !== undefined) {
+    void setProfileInstall(profileId, patch.installId)
+  }
+  if (patch.vr !== undefined) {
+    void setProfileVr(profileId, patch.vr)
+  }
 }
 
 function updateSelectedLaunchOptions(value: LaunchOptions) {
@@ -116,7 +150,7 @@ async function onLaunchSingle(profile: LaunchProfile) {
   launchError.value = ''
   launchInfo.value  = ''
   try {
-    await launchProfile(profile, runtimeFor(profile), false)
+    await launchProfile(effectiveProfile(profile), runtimeFor(profile), false)
     launchInfo.value = `Launched: ${profile.name}`
   } catch (e) {
     launchError.value = e instanceof Error ? e.message : String(e)
@@ -127,7 +161,7 @@ async function onLaunchAll() {
   launchError.value = ''
   launchInfo.value  = ''
   const orderedEntries: LaunchQueueEntry[] = profiles.value.map(profile => ({
-    profile,
+    profile: effectiveProfile(profile),
     runtime: runtimeFor(profile)
   }))
   const { launched, errors } = await launchSelected(orderedEntries, autoLayout.value)
@@ -148,7 +182,24 @@ const installOptions = computed(() => appConfig.value.installs)
           <p class="panel-title">Launch Queue</p>
           <p class="text-sm text-secondary">Batch launch follows this top-to-bottom order and waits for VRChat to open between profiles.</p>
         </div>
+        <div class="queue-toolbar">
+          <label class="checkbox-row">
+            <input v-model="autoLayout" type="checkbox" />
+            <span>Auto-layout</span>
+          </label>
+          <button
+            class="btn btn-primary"
+            type="button"
+            :disabled="!hasEnabledProfiles"
+            @click="onLaunchAll"
+          >
+            Launch All Selected
+          </button>
+        </div>
       </div>
+
+      <div v-if="launchError" class="error-banner">{{ launchError }}</div>
+      <div v-else-if="launchInfo" class="info-banner">{{ launchInfo }}</div>
 
       <div v-if="profiles.length === 0" class="empty-state text-muted text-sm">
         No profiles yet. Create profiles first, then assign install and VR mode here when launching.
@@ -180,18 +231,26 @@ const installOptions = computed(() => appConfig.value.installs)
             <option value="">Select install</option>
             <option v-for="install in installOptions" :key="install.id" :value="install.id">{{ install.name }}</option>
           </select>
-          <label class="checkbox-row queue-vr" @click.stop>
+          <label class="checkbox-row queue-global" @click.stop title="Apply global launch options to this profile">
             <input
-              :checked="runtimeFor(profile).vr"
+              :checked="profile.useGlobalOptions"
               type="checkbox"
-              @change="patchRuntime(profile.id, { vr: ($event.target as HTMLInputElement).checked })"
+              @change="toggleGlobalOptions(profile.id)"
             />
-            <span>VR</span>
+            <span>Global</span>
           </label>
           <div class="queue-actions" @click.stop>
             <button class="btn btn-ghost btn-sm" type="button" :disabled="index === 0" @click="moveProfile(profile.id, -1)">Up</button>
             <button class="btn btn-ghost btn-sm" type="button" :disabled="index === profiles.length - 1" @click="moveProfile(profile.id, 1)">Down</button>
             <button class="btn btn-primary btn-sm" type="button" :disabled="!runtimeFor(profile).installId" @click="onLaunchSingle(profile)">Launch</button>
+            <label class="checkbox-row queue-vr">
+              <input
+                :checked="runtimeFor(profile).vr"
+                type="checkbox"
+                @change="patchRuntime(profile.id, { vr: ($event.target as HTMLInputElement).checked })"
+              />
+              <span>VR</span>
+            </label>
           </div>
         </div>
       </div>
@@ -207,11 +266,18 @@ const installOptions = computed(() => appConfig.value.installs)
     </div>
 
     <div class="card section-card options-section">
-      <p class="panel-title">Launch Options</p>
+      <div class="section-header">
+        <p class="panel-title">Launch Options</p>
+        <label class="checkbox-row global-toggle">
+          <input type="checkbox" v-model="editingGlobal" />
+          <span>Modify Global Options</span>
+        </label>
+      </div>
+      <p v-if="editingGlobal" class="text-xs text-secondary">Global options apply when a profile has "Global" checked in the launch queue.</p>
       <LaunchOptionsPanel
-        :model-value="selectedLaunchOptions"
-        :readonly="!selectedEditor"
-        @update:model-value="updateSelectedLaunchOptions"
+        :model-value="editingGlobal ? globalOptions : selectedLaunchOptions"
+        :readonly="!editingGlobal && !selectedEditor"
+        @update:model-value="editingGlobal ? updateGlobalOptions($event) : updateSelectedLaunchOptions($event)"
       />
     </div>
 
@@ -224,24 +290,6 @@ const installOptions = computed(() => appConfig.value.installs)
         placeholder="--example-flag --another=value"
         @input="selectedEditor && (selectedEditor.customParams = ($event.target as HTMLTextAreaElement).value)"
       />
-    </div>
-
-    <div class="card footer-bar">
-      <div v-if="launchError" class="error-banner" style="flex: 1">{{ launchError }}</div>
-      <div v-else-if="launchInfo" class="info-banner" style="flex: 1">{{ launchInfo }}</div>
-      <div v-else style="flex: 1" />
-      <label class="checkbox-row">
-        <input v-model="autoLayout" type="checkbox" />
-        <span>Auto-layout</span>
-      </label>
-      <button
-        class="btn btn-primary"
-        type="button"
-        :disabled="!hasEnabledProfiles"
-        @click="onLaunchAll"
-      >
-        Launch All Selected
-      </button>
     </div>
   </div>
 </template>
@@ -262,6 +310,13 @@ const installOptions = computed(() => appConfig.value.installs)
   flex-shrink: 0;
 }
 .section-header { display: flex; justify-content: space-between; gap: $space-3; }
+.queue-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-3;
+  flex-wrap: wrap;
+}
 .queue-list {
   display: flex;
   flex-direction: column;
@@ -269,7 +324,7 @@ const installOptions = computed(() => appConfig.value.installs)
 }
 .queue-row {
   display: grid;
-  grid-template-columns: 28px 28px minmax(0, 1fr) minmax(150px, 220px) 72px auto;
+  grid-template-columns: 28px 28px minmax(0, 1fr) minmax(150px, 220px) auto auto;
   align-items: center;
   gap: $space-2;
   padding: $space-2;
@@ -289,23 +344,22 @@ const installOptions = computed(() => appConfig.value.installs)
 .queue-copy { min-width: 0; }
 .queue-name { font-weight: 600; }
 .queue-install { width: 100%; }
-.queue-vr { justify-self: start; }
+.queue-global { justify-self: start; white-space: nowrap; }
+.queue-vr { white-space: nowrap; }
 .queue-actions {
   display: flex;
+  align-items: center;
   gap: $space-1;
   justify-self: end;
+}
+.global-toggle {
+  font-size: $font-size-xs;
+  color: var(--color-text-secondary);
 }
 
 .custom-params {
   min-height: 84px;
   resize: vertical;
-}
-.footer-bar {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  flex-shrink: 0;
-  flex-wrap: wrap;
 }
 .empty-state {
   padding: $space-4;

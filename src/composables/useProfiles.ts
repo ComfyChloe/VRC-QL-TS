@@ -17,8 +17,8 @@ export function useProfiles() {
     if (idx === -1) return
     appConfig.value.profiles[idx] = {
       ...updated,
-      installId: '',
-      vr: true,
+      installId: updated.installId,
+      vr: updated.vr,
       updatedAt: new Date().toISOString()
     }
     await saveConfig()
@@ -36,8 +36,8 @@ export function useProfiles() {
       ...JSON.parse(JSON.stringify(source)) as LaunchProfile,
       id: crypto.randomUUID(),
       name: `${source.name} (copy)`,
-      installId: '',
-      vr: true,
+      installId: source.installId,
+      vr: source.vr,
       enabled: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -48,9 +48,14 @@ export function useProfiles() {
   }
 
   async function toggleEnabled(id: string): Promise<void> {
-    const profile = appConfig.value.profiles.find(p => p.id === id)
-    if (!profile) return
-    profile.enabled = !profile.enabled
+    const index = appConfig.value.profiles.findIndex(p => p.id === id)
+    if (index === -1) return
+    const profile = appConfig.value.profiles[index]
+    appConfig.value.profiles[index] = {
+      ...profile,
+      enabled: !profile.enabled,
+      updatedAt: new Date().toISOString()
+    }
     await saveConfig()
   }
 
@@ -66,5 +71,41 @@ export function useProfiles() {
     await saveConfig()
   }
 
-  return { profiles, addProfile, updateProfile, removeProfile, duplicateProfile, toggleEnabled, moveProfile }
+  async function toggleGlobalOptions(id: string): Promise<void> {
+    const index = appConfig.value.profiles.findIndex(p => p.id === id)
+    if (index === -1) return
+    const profile = appConfig.value.profiles[index]
+    appConfig.value.profiles[index] = {
+      ...profile,
+      useGlobalOptions: !profile.useGlobalOptions,
+      updatedAt: new Date().toISOString()
+    }
+    await saveConfig()
+  }
+
+  async function setProfileVr(id: string, vr: boolean): Promise<void> {
+    const index = appConfig.value.profiles.findIndex(p => p.id === id)
+    if (index === -1) return
+    const profile = appConfig.value.profiles[index]
+    appConfig.value.profiles[index] = {
+      ...profile,
+      vr,
+      updatedAt: new Date().toISOString()
+    }
+    await saveConfig()
+  }
+
+  async function setProfileInstall(id: string, installId: string): Promise<void> {
+    const index = appConfig.value.profiles.findIndex(p => p.id === id)
+    if (index === -1) return
+    const profile = appConfig.value.profiles[index]
+    appConfig.value.profiles[index] = {
+      ...profile,
+      installId,
+      updatedAt: new Date().toISOString()
+    }
+    await saveConfig()
+  }
+
+  return { profiles, addProfile, updateProfile, removeProfile, duplicateProfile, toggleEnabled, moveProfile, toggleGlobalOptions, setProfileVr, setProfileInstall }
 }

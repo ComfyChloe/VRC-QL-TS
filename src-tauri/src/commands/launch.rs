@@ -3,6 +3,12 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
 #[tauri::command]
 pub fn launch_instance(
     exe_path: String,
@@ -16,6 +22,18 @@ pub fn launch_instance(
         None
     };
     let launch_path = resolve_launch_path(&exe_path);
+    #[cfg(target_os = "windows")]
+    let child = Command::new(&launch_path)
+        .args(&args)
+        .current_dir(
+            launch_path
+                .parent()
+                .unwrap_or_else(|| Path::new(".")),
+        )
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .map_err(|e| format!("Failed to launch '{}': {}", launch_path.display(), e))?;
+    #[cfg(not(target_os = "windows"))]
     let child = Command::new(&launch_path)
         .args(&args)
         .current_dir(
@@ -59,6 +77,7 @@ fn resolve_launch_path(exe_path: &str) -> PathBuf {
 fn count_vrchat_processes() -> Result<usize, String> {
     let output = Command::new("tasklist")
         .args(["/FI", "IMAGENAME eq VRChat.exe", "/FO", "CSV", "/NH"])
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| format!("Failed to query running VRChat processes: {}", e))?;
 

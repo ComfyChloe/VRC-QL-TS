@@ -90,12 +90,15 @@ export interface LaunchProfile {
   instance: InstanceConfig
   customParams: string
   enabled: boolean
+  useGlobalOptions: boolean
   createdAt: string
   updatedAt: string
 }
 
 export interface AppTheme {
   accentColor: string
+  backgroundColor: string
+  surfaceColor: string
 }
 
 export interface AppWindowConfig {
@@ -103,11 +106,21 @@ export interface AppWindowConfig {
   autoLayoutColumns: number
 }
 
+export interface GlobalLaunchOptions {
+  debug: DebugOptions
+  creator: CreatorOptions
+  performance: PerformanceOptions
+  ik: IkOptions
+  system: SystemOptions
+  display: DisplayOptions
+}
+
 export interface AppConfig {
   installs: VRCInstall[]
   profiles: LaunchProfile[]
   theme: AppTheme
   window: AppWindowConfig
+  globalOptions: GlobalLaunchOptions
 }
 
 // ── Default factory functions ────────────────────────────────
@@ -154,16 +167,30 @@ export function defaultProfile(id: string): LaunchProfile {
     },
     customParams: '',
     enabled: false,
+    useGlobalOptions: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }
 }
 
 export function defaultConfig(): AppConfig {
+  const blank = defaultProfile('__global__')
   return {
     installs: [],
     profiles: [],
-    theme: { accentColor: '#7c6aef' },
-    window: { rememberSize: true, autoLayoutColumns: 2 }
+    theme: {
+      accentColor: '#7c6aef',
+      backgroundColor: '#161616',
+      surfaceColor: '#202020'
+    },
+    window: { rememberSize: true, autoLayoutColumns: 2 },
+    globalOptions: {
+      debug: blank.debug,
+      creator: blank.creator,
+      performance: blank.performance,
+      ik: blank.ik,
+      system: blank.system,
+      display: blank.display
+    }
   }
 }

@@ -105,7 +105,7 @@ function numOrNull(v: string): number | null {
           <label class="field-label">In Port</label>
           <input class="input" type="number" min="1" max="65535"
             :value="modelValue.creator.osc.inPort" :disabled="readonly"
-            @change="patchOsc('inPort', numOrNull(($event.target as HTMLInputElement).value) ?? 9001)" />
+            @blur="patchOsc('inPort', numOrNull(($event.target as HTMLInputElement).value) ?? 9001)" />
         </div>
         <div class="field-stack" style="flex: 2">
           <label class="field-label">Sender IP</label>
@@ -117,7 +117,7 @@ function numOrNull(v: string): number | null {
           <label class="field-label">Out Port</label>
           <input class="input" type="number" min="1" max="65535"
             :value="modelValue.creator.osc.outPort" :disabled="readonly"
-            @change="patchOsc('outPort', numOrNull(($event.target as HTMLInputElement).value) ?? 9000)" />
+            @blur="patchOsc('outPort', numOrNull(($event.target as HTMLInputElement).value) ?? 9000)" />
         </div>
       </div>
       <div class="field-stack">
@@ -137,7 +137,7 @@ function numOrNull(v: string): number | null {
           <label class="field-label">Max FPS</label>
           <input class="input" type="number" min="1" max="999" placeholder="Default"
             :value="modelValue.performance.maxFps ?? ''" :disabled="readonly"
-            @change="patchPerf('maxFps', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchPerf('maxFps', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
         <div class="field-stack">
           <label class="field-label">Affinity (hex)</label>
@@ -151,13 +151,13 @@ function numOrNull(v: string): number | null {
           <label class="field-label">Process Priority (0–5)</label>
           <input class="input" type="number" min="0" max="5" placeholder="Default"
             :value="modelValue.performance.processPriority ?? ''" :disabled="readonly"
-            @change="patchPerf('processPriority', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchPerf('processPriority', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
         <div class="field-stack">
           <label class="field-label">Main Thread Priority (0–5)</label>
           <input class="input" type="number" min="0" max="5" placeholder="Default"
             :value="modelValue.performance.mainThreadPriority ?? ''" :disabled="readonly"
-            @change="patchPerf('mainThreadPriority', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchPerf('mainThreadPriority', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
       </div>
       </div>
@@ -224,13 +224,13 @@ function numOrNull(v: string): number | null {
           <label class="field-label">Width</label>
           <input class="input" type="number" min="640" placeholder="Default"
             :value="modelValue.display.screenWidth ?? ''" :disabled="readonly"
-            @change="patchDisplay('screenWidth', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchDisplay('screenWidth', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
         <div class="field-stack">
           <label class="field-label">Height</label>
           <input class="input" type="number" min="480" placeholder="Default"
             :value="modelValue.display.screenHeight ?? ''" :disabled="readonly"
-            @change="patchDisplay('screenHeight', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchDisplay('screenHeight', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
       </div>
       <div class="inline-fields">
@@ -249,7 +249,7 @@ function numOrNull(v: string): number | null {
           <label class="field-label">Monitor</label>
           <input class="input" type="number" min="1" placeholder="Default"
             :value="modelValue.display.monitor ?? ''" :disabled="readonly"
-            @change="patchDisplay('monitor', numOrNull(($event.target as HTMLInputElement).value))" />
+            @blur="patchDisplay('monitor', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
       </div>
       </div>
