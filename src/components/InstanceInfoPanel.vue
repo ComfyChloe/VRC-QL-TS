@@ -119,8 +119,8 @@ const REGION_LABELS: { id: InstanceRegion; label: string }[] = [
     <!-- Join mode fields -->
     <template v-else-if="modelValue.mode === 'join'">
       <div class="field-stack">
-        <label class="field-label">Instance Link</label>
-        <input class="input" type="text" placeholder="wrld_... or full vrchat://launch?worldId=..."
+        <label class="field-label">Instance ID</label>
+        <input class="input" type="text" placeholder="instance ID here"
           :value="modelValue.joinLink" :disabled="readonly"
           @input="patch('joinLink', ($event.target as HTMLInputElement).value)" />
       </div>
