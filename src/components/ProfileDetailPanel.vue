@@ -78,6 +78,9 @@ function save() {
           />
         </div>
       </div>
+      <p class="profile-note text-xs text-secondary">
+        Sign into this VRChat profile slot at least once before using it here.
+      </p>
     </div>
 
     <div class="panel-actions">
@@ -109,6 +112,11 @@ function save() {
 }
 .header-name { min-width: 0; }
 .header-slot { min-width: 0; }
+.profile-note {
+  padding: $space-2 $space-3;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+}
 .tag-row {
   display: flex;
   flex-wrap: wrap;
