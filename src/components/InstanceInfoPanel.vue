@@ -120,10 +120,13 @@ const REGION_LABELS: { id: InstanceRegion; label: string }[] = [
     <template v-else-if="modelValue.mode === 'join'">
       <div class="field-stack">
         <label class="field-label">Instance Link</label>
-        <input class="input" type="text" placeholder="vrchat://launch?worldId=..."
+        <input class="input" type="text" placeholder="wrld_... or full vrchat://launch?worldId=..."
           :value="modelValue.joinLink" :disabled="readonly"
           @input="patch('joinLink', ($event.target as HTMLInputElement).value)" />
       </div>
+      <p class="text-xs text-secondary">
+        Paste either the full VRChat launch link or just the world/instance portion. The launcher adds the prefix automatically.
+      </p>
     </template>
 
     <!-- Local mode info -->

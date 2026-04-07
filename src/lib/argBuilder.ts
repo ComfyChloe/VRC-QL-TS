@@ -9,6 +9,8 @@ export interface LaunchArgOverrides {
   vr?: boolean
 }
 
+const JOIN_LINK_PREFIX = 'vrchat://launch?worldId='
+
 export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides = {}): string[] {
   const args: string[] = []
   const vrEnabled = overrides.vr ?? profile.vr
@@ -64,7 +66,7 @@ export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides 
   // ── Instance ──────────────────────────────────────────────
   const inst = profile.instance
   if (inst.mode === 'join' && inst.joinLink.trim()) {
-    args.push(inst.joinLink.trim())
+    args.push(normalizeJoinLink(inst.joinLink))
   }
   // 'create' / 'local' / 'none' have no standalone CLI flags;
   // the launcher constructs a vrchat:// URI which VRChat.exe
@@ -88,4 +90,13 @@ export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides 
 export function buildCommandPreview(exePath: string, profile: LaunchProfile): string {
   const args = buildArgs(profile)
   return [exePath, ...args].join(' ')
+}
+
+function normalizeJoinLink(joinLink: string): string {
+  const trimmed = joinLink.trim()
+  if (!trimmed) return ''
+  if (/^vrchat:\/\/launch\?worldid=/i.test(trimmed)) {
+    return trimmed
+  }
+  return `${JOIN_LINK_PREFIX}${trimmed}`
 }

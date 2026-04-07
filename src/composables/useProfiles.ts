@@ -86,11 +86,19 @@ export function useProfiles() {
   async function setProfileVr(id: string, vr: boolean): Promise<void> {
     const index = appConfig.value.profiles.findIndex(p => p.id === id)
     if (index === -1) return
-    const profile = appConfig.value.profiles[index]
-    appConfig.value.profiles[index] = {
-      ...profile,
-      vr,
-      updatedAt: new Date().toISOString()
+    if (vr) {
+      appConfig.value.profiles = appConfig.value.profiles.map(profile => ({
+        ...profile,
+        vr: profile.id === id,
+        updatedAt: profile.id === id || profile.vr ? new Date().toISOString() : profile.updatedAt
+      }))
+    } else {
+      const profile = appConfig.value.profiles[index]
+      appConfig.value.profiles[index] = {
+        ...profile,
+        vr: false,
+        updatedAt: new Date().toISOString()
+      }
     }
     await saveConfig()
   }

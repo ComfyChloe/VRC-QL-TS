@@ -116,6 +116,11 @@ function runtimeFor(profile: LaunchProfile): LaunchRuntimeSettings {
 }
 
 function patchRuntime(profileId: string, patch: Partial<LaunchRuntimeSettings>) {
+  if (patch.vr) {
+    for (const [id, runtime] of Object.entries(runtimeSettings.value)) {
+      runtimeSettings.value[id] = { ...runtime, vr: id === profileId }
+    }
+  }
   runtimeSettings.value[profileId] = {
     ...(runtimeSettings.value[profileId] ?? { installId: appConfig.value.installs[0]?.id ?? '', vr: true }),
     ...patch
