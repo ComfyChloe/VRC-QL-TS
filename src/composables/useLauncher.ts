@@ -34,19 +34,18 @@ export function useLauncher() {
     entries: LaunchQueueEntry[],
     autoLayout: boolean
   ): Promise<{ launched: number; errors: string[] }> {
-    const selected = entries.filter(entry => entry.profile.enabled)
     const errors: string[] = []
-    for (const entry of selected) {
+    for (const entry of entries) {
       try {
         await launchProfile(entry.profile, entry.runtime, true)
       } catch (e) {
         errors.push(e instanceof Error ? e.message : String(e))
       }
     }
-    if (autoLayout && selected.length > 1) {
+    if (autoLayout && entries.length > 1) {
       await invoke('tile_vrchat_windows', { columns: appConfig.value.window.autoLayoutColumns })
     }
-    return { launched: selected.length - errors.length, errors }
+    return { launched: entries.length - errors.length, errors }
   }
 
   return { launchProfile, launchSelected }

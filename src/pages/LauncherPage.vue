@@ -5,41 +5,32 @@ import InstanceInfoPanel from '../components/InstanceInfoPanel.vue'
 import type { LaunchOptions } from '../components/LaunchOptionsPanel.vue'
 import { appConfig, saveConfig } from '../lib/config'
 import { useProfiles } from '../composables/useProfiles'
-import { useLauncher, type LaunchQueueEntry, type LaunchRuntimeSettings } from '../composables/useLauncher'
+import { useLauncher, type LaunchQueueEntry } from '../composables/useLauncher'
+import { useLaunchQueue, type QueueItem } from '../composables/useLaunchQueue'
 import type { InstanceConfig, LaunchProfile } from '../lib/types'
 import { defaultProfile } from '../lib/types'
 
-const { profiles, toggleEnabled, moveProfile, updateProfile, toggleGlobalOptions, setProfileVr, setProfileInstall } = useProfiles()
+const { profiles, updateProfile, toggleGlobalOptions } = useProfiles()
 const { launchProfile, launchSelected } = useLauncher()
-const runtimeSettings = ref<Record<string, LaunchRuntimeSettings>>({})
-const selectedId = ref<string | undefined>(undefined)
+const {
+  queue, addToQueue, setQueueProfile, removeFromQueue,
+  moveInQueue, toggleQueueEnabled, patchQueueRuntime, hasEnabledItems
+} = useLaunchQueue()
+const selectedQueueId = ref<string | undefined>(undefined)
 const selectedEditor = ref<LaunchProfile | null>(null)
 let syncSelectedEditor = false
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
-watch(profiles, (value) => {
-  const firstInstallId = appConfig.value.installs[0]?.id ?? ''
-  for (const profile of value) {
-    if (!runtimeSettings.value[profile.id]) {
-      runtimeSettings.value[profile.id] = {
-        installId: profile.installId || firstInstallId,
-        vr: profile.vr
-      }
-    }
-  }
-  for (const profileId of Object.keys(runtimeSettings.value)) {
-    if (!value.some(profile => profile.id === profileId)) {
-      delete runtimeSettings.value[profileId]
-    }
-  }
-  if (!selectedId.value || !value.some(profile => profile.id === selectedId.value)) {
-    selectedId.value = value[0]?.id
-  }
-}, { immediate: true, deep: true })
+function resolveProfile(item: QueueItem): LaunchProfile | null {
+  return profiles.value.find(p => p.id === item.profileId) ?? null
+}
 
-const selectedProfile = computed<LaunchProfile | null>(() =>
-  profiles.value.find(profile => profile.id === selectedId.value) ?? null
-)
+const selectedItem = computed(() => queue.value.find(i => i.queueId === selectedQueueId.value) ?? null)
+
+const selectedProfile = computed<LaunchProfile | null>(() => {
+  const item = selectedItem.value
+  return item ? resolveProfile(item) : null
+})
 
 watch(() => ({
   id: selectedProfile.value?.id,
@@ -59,7 +50,6 @@ watch(selectedEditor, (profile) => {
   }, 150)
 }, { deep: true })
 
-// Blank state shown when no profile selected
 const blankOptions = computed<LaunchOptions>(() => {
   const p = defaultProfile('__blank__')
   return {
@@ -86,7 +76,7 @@ async function updateGlobalOptions(value: LaunchOptions) {
   await saveConfig()
 }
 
-function effectiveProfile(profile: typeof profiles.value[number]) {
+function effectiveProfile(profile: LaunchProfile) {
   if (!profile.useGlobalOptions) return profile
   const g = appConfig.value.globalOptions
   return {
@@ -108,31 +98,6 @@ const selectedLaunchOptions = computed<LaunchOptions>(() => {
   }
 })
 
-function runtimeFor(profile: LaunchProfile): LaunchRuntimeSettings {
-  return runtimeSettings.value[profile.id] ?? {
-    installId: appConfig.value.installs[0]?.id ?? '',
-    vr: true
-  }
-}
-
-function patchRuntime(profileId: string, patch: Partial<LaunchRuntimeSettings>) {
-  if (patch.vr) {
-    for (const [id, runtime] of Object.entries(runtimeSettings.value)) {
-      runtimeSettings.value[id] = { ...runtime, vr: id === profileId }
-    }
-  }
-  runtimeSettings.value[profileId] = {
-    ...(runtimeSettings.value[profileId] ?? { installId: appConfig.value.installs[0]?.id ?? '', vr: true }),
-    ...patch
-  }
-  if (patch.installId !== undefined) {
-    void setProfileInstall(profileId, patch.installId)
-  }
-  if (patch.vr !== undefined) {
-    void setProfileVr(profileId, patch.vr)
-  }
-}
-
 function updateSelectedLaunchOptions(value: LaunchOptions) {
   if (!selectedEditor.value) return
   selectedEditor.value = {
@@ -151,11 +116,13 @@ function updateSelectedInstance(value: InstanceConfig) {
   selectedEditor.value = { ...selectedEditor.value, instance: value }
 }
 
-async function onLaunchSingle(profile: LaunchProfile) {
+async function onLaunchSingle(item: QueueItem) {
+  const profile = resolveProfile(item)
+  if (!profile) return
   launchError.value = ''
   launchInfo.value  = ''
   try {
-    await launchProfile(effectiveProfile(profile), runtimeFor(profile), false)
+    await launchProfile(effectiveProfile(profile), item.runtime, false)
     launchInfo.value = `Launched: ${profile.name}`
   } catch (e) {
     launchError.value = e instanceof Error ? e.message : String(e)
@@ -165,16 +132,33 @@ async function onLaunchSingle(profile: LaunchProfile) {
 async function onLaunchAll() {
   launchError.value = ''
   launchInfo.value  = ''
-  const orderedEntries: LaunchQueueEntry[] = profiles.value.map(profile => ({
-    profile: effectiveProfile(profile),
-    runtime: runtimeFor(profile)
-  }))
+  const orderedEntries: LaunchQueueEntry[] = queue.value
+    .filter(item => item.enabled)
+    .map(item => {
+      const profile = resolveProfile(item)
+      if (!profile) return null
+      return { profile: effectiveProfile(profile), runtime: item.runtime }
+    })
+    .filter((e): e is LaunchQueueEntry => e !== null)
   const { launched, errors } = await launchSelected(orderedEntries, autoLayout.value)
   if (errors.length) launchError.value = errors.join(' | ')
   else launchInfo.value = `Launched ${launched} profile(s)`
 }
 
-const hasEnabledProfiles = computed(() => profiles.value.some(p => p.enabled))
+function onAddItem() {
+  addToQueue(profiles.value)
+  selectedQueueId.value = queue.value[queue.value.length - 1]?.queueId
+}
+
+function onRemoveSelected() {
+  const id = selectedQueueId.value
+  if (!id) return
+  const idx = queue.value.findIndex(i => i.queueId === id)
+  const next = queue.value[idx + 1] ?? queue.value[idx - 1]
+  selectedQueueId.value = next?.queueId
+  removeFromQueue(id)
+}
+
 const installOptions = computed(() => appConfig.value.installs)
 </script>
 
@@ -192,10 +176,12 @@ const installOptions = computed(() => appConfig.value.installs)
             <input v-model="autoLayout" type="checkbox" />
             <span>Auto-layout</span>
           </label>
+          <button class="btn btn-ghost" type="button" :disabled="profiles.length === 0" @click="onAddItem">+ Add</button>
+          <button class="btn btn-ghost" type="button" :disabled="!selectedQueueId" @click="onRemoveSelected">- Remove</button>
           <button
             class="btn btn-primary"
             type="button"
-            :disabled="!hasEnabledProfiles"
+            :disabled="!hasEnabledItems"
             @click="onLaunchAll"
           >
             Launch All Selected
@@ -206,53 +192,60 @@ const installOptions = computed(() => appConfig.value.installs)
       <div v-if="launchError" class="error-banner">{{ launchError }}</div>
       <div v-else-if="launchInfo" class="info-banner">{{ launchInfo }}</div>
 
-      <div v-if="profiles.length === 0" class="empty-state text-muted text-sm">
-        No profiles yet. Create profiles first, then assign install and VR mode here when launching.
+      <div v-if="queue.length === 0" class="empty-state text-muted text-sm">
+        Click "+ Add Profile" to add profiles to the launch queue. The same profile can be added multiple times with different install settings.
       </div>
 
       <div v-else class="queue-list">
         <div
-          v-for="(profile, index) in profiles"
-          :key="profile.id"
+          v-for="(item, index) in queue"
+          :key="item.queueId"
           class="queue-row"
-          :class="{ active: selectedId === profile.id }"
-          @click="selectedId = profile.id"
+          :class="{ active: selectedQueueId === item.queueId }"
+          @click="selectedQueueId = item.queueId"
         >
           <label class="checkbox-row queue-check" @click.stop>
-            <input :checked="profile.enabled" type="checkbox" @change="toggleEnabled(profile.id)" />
+            <input :checked="item.enabled" type="checkbox" @change="toggleQueueEnabled(item.queueId)" />
             <span></span>
           </label>
           <div class="queue-order">{{ index + 1 }}</div>
-          <div class="queue-copy">
-            <div class="queue-name">{{ profile.name }}</div>
-            <div class="queue-meta text-xs text-secondary">Profile {{ profile.profileIndex }}<span v-if="profile.description"> · {{ profile.description }}</span></div>
+          <div class="queue-copy" @click.stop>
+            <select
+              class="input queue-profile-select"
+              :value="item.profileId"
+              @change="setQueueProfile(item.queueId, ($event.target as HTMLSelectElement).value, profiles)"
+            >
+              <option value="">— No profile —</option>
+              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+            <div v-if="resolveProfile(item)?.description" class="queue-meta text-xs text-secondary">{{ resolveProfile(item)?.description }}</div>
           </div>
           <select
             class="input queue-install"
-            :value="runtimeFor(profile).installId"
+            :value="item.runtime.installId"
             @click.stop
-            @change="patchRuntime(profile.id, { installId: ($event.target as HTMLSelectElement).value })"
+            @change="patchQueueRuntime(item.queueId, { installId: ($event.target as HTMLSelectElement).value })"
           >
             <option value="">Select install</option>
             <option v-for="install in installOptions" :key="install.id" :value="install.id">{{ install.name }}</option>
           </select>
           <label class="checkbox-row queue-global" @click.stop title="Apply global launch options to this profile">
             <input
-              :checked="profile.useGlobalOptions"
+              :checked="resolveProfile(item)?.useGlobalOptions ?? false"
               type="checkbox"
-              @change="toggleGlobalOptions(profile.id)"
+              @change="resolveProfile(item) && toggleGlobalOptions(resolveProfile(item)!.id)"
             />
             <span>Global</span>
           </label>
           <div class="queue-actions" @click.stop>
-            <button class="btn btn-ghost btn-sm" type="button" :disabled="index === 0" @click="moveProfile(profile.id, -1)">Up</button>
-            <button class="btn btn-ghost btn-sm" type="button" :disabled="index === profiles.length - 1" @click="moveProfile(profile.id, 1)">Down</button>
-            <button class="btn btn-primary btn-sm" type="button" :disabled="!runtimeFor(profile).installId" @click="onLaunchSingle(profile)">Launch</button>
+            <button class="btn btn-ghost btn-sm" type="button" :disabled="index === 0" @click="moveInQueue(item.queueId, -1)">Up</button>
+            <button class="btn btn-ghost btn-sm" type="button" :disabled="index === queue.length - 1" @click="moveInQueue(item.queueId, 1)">Down</button>
+            <button class="btn btn-primary btn-sm" type="button" :disabled="!item.runtime.installId" @click="onLaunchSingle(item)">Launch</button>
             <label class="checkbox-row queue-vr">
               <input
-                :checked="runtimeFor(profile).vr"
+                :checked="item.runtime.vr"
                 type="checkbox"
-                @change="patchRuntime(profile.id, { vr: ($event.target as HTMLInputElement).checked })"
+                @change="patchQueueRuntime(item.queueId, { vr: ($event.target as HTMLInputElement).checked })"
               />
               <span>VR</span>
             </label>
@@ -346,7 +339,8 @@ const installOptions = computed(() => appConfig.value.installs)
 }
 .queue-check { justify-content: center; }
 .queue-order { text-align: center; color: var(--color-text-muted); font-size: $font-size-xs; }
-.queue-copy { min-width: 0; }
+.queue-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.queue-profile-select { width: 100%; }
 .queue-name { font-weight: 600; }
 .queue-install { width: 100%; }
 .queue-global { justify-self: start; white-space: nowrap; }
@@ -361,7 +355,6 @@ const installOptions = computed(() => appConfig.value.installs)
   font-size: $font-size-xs;
   color: var(--color-text-secondary);
 }
-
 .custom-params {
   min-height: 84px;
   resize: vertical;
