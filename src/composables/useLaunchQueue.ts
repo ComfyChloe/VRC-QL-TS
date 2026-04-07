@@ -8,6 +8,7 @@ export interface QueueItem {
   profileId: string
   runtime: LaunchRuntimeSettings
   enabled: boolean
+  useGlobalOptions: boolean
 }
 
 const queue = ref<QueueItem[]>([])
@@ -20,7 +21,8 @@ export function useLaunchQueue() {
       queueId: crypto.randomUUID(),
       profileId: first?.id ?? '',
       runtime: { installId, vr: first?.vr ?? false },
-      enabled: true
+      enabled: true,
+      useGlobalOptions: first?.useGlobalOptions ?? false
     })
   }
 
@@ -33,6 +35,7 @@ export function useLaunchQueue() {
       installId: profile?.installId || (appConfig.value.installs[0]?.id ?? ''),
       vr: profile?.vr ?? item.runtime.vr
     }
+    item.useGlobalOptions = profile?.useGlobalOptions ?? false
   }
 
   function removeFromQueue(queueId: string) {
@@ -52,6 +55,11 @@ export function useLaunchQueue() {
   function toggleQueueEnabled(queueId: string) {
     const item = queue.value.find(i => i.queueId === queueId)
     if (item) item.enabled = !item.enabled
+  }
+
+  function toggleQueueGlobal(queueId: string) {
+    const item = queue.value.find(i => i.queueId === queueId)
+    if (item) item.useGlobalOptions = !item.useGlobalOptions
   }
 
   function patchQueueRuntime(queueId: string, patch: Partial<LaunchRuntimeSettings>) {
@@ -75,6 +83,7 @@ export function useLaunchQueue() {
     removeFromQueue,
     moveInQueue,
     toggleQueueEnabled,
+    toggleQueueGlobal,
     patchQueueRuntime,
     hasEnabledItems
   }

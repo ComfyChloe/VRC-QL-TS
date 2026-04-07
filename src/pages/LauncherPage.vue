@@ -10,11 +10,11 @@ import { useLaunchQueue, type QueueItem } from '../composables/useLaunchQueue'
 import type { InstanceConfig, LaunchProfile } from '../lib/types'
 import { defaultProfile } from '../lib/types'
 
-const { profiles, updateProfile, toggleGlobalOptions } = useProfiles()
+const { profiles, updateProfile } = useProfiles()
 const { launchProfile, launchSelected } = useLauncher()
 const {
   queue, addToQueue, setQueueProfile, removeFromQueue,
-  moveInQueue, toggleQueueEnabled, patchQueueRuntime, hasEnabledItems
+  moveInQueue, toggleQueueEnabled, toggleQueueGlobal, patchQueueRuntime, hasEnabledItems
 } = useLaunchQueue()
 const selectedQueueId = ref<string | undefined>(undefined)
 const selectedEditor = ref<LaunchProfile | null>(null)
@@ -76,8 +76,8 @@ async function updateGlobalOptions(value: LaunchOptions) {
   await saveConfig()
 }
 
-function effectiveProfile(profile: LaunchProfile) {
-  if (!profile.useGlobalOptions) return profile
+function effectiveProfile(profile: LaunchProfile, useGlobalOptions: boolean) {
+  if (!useGlobalOptions) return profile
   const g = appConfig.value.globalOptions
   return {
     ...profile,
@@ -122,7 +122,7 @@ async function onLaunchSingle(item: QueueItem) {
   launchError.value = ''
   launchInfo.value  = ''
   try {
-    await launchProfile(effectiveProfile(profile), item.runtime, false)
+    await launchProfile(effectiveProfile(profile, item.useGlobalOptions), item.runtime, false)
     launchInfo.value = `Launched: ${profile.name}`
   } catch (e) {
     launchError.value = e instanceof Error ? e.message : String(e)
@@ -137,7 +137,7 @@ async function onLaunchAll() {
     .map(item => {
       const profile = resolveProfile(item)
       if (!profile) return null
-      return { profile: effectiveProfile(profile), runtime: item.runtime }
+      return { profile: effectiveProfile(profile, item.useGlobalOptions), runtime: item.runtime }
     })
     .filter((e): e is LaunchQueueEntry => e !== null)
   const { launched, errors } = await launchSelected(orderedEntries, autoLayout.value)
@@ -231,9 +231,9 @@ const installOptions = computed(() => appConfig.value.installs)
           </select>
           <label class="checkbox-row queue-global" @click.stop title="Apply global launch options to this profile">
             <input
-              :checked="resolveProfile(item)?.useGlobalOptions ?? false"
+              :checked="item.useGlobalOptions"
               type="checkbox"
-              @change="resolveProfile(item) && toggleGlobalOptions(resolveProfile(item)!.id)"
+              @change="toggleQueueGlobal(item.queueId)"
             />
             <span>Global</span>
           </label>
