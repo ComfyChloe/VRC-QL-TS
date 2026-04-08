@@ -8,7 +8,7 @@
 [![Tauri](https://img.shields.io/badge/tauri-2.x-24C8DB.svg)](https://tauri.app/)
 [![Vue](https://img.shields.io/badge/vue-3.x-42B883.svg)](https://vuejs.org/)
 [![Rust](https://img.shields.io/badge/rust-2021-000000.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-ComfyChloe%20Non--Commercial%20Copyleft%20License%201.2-lightgrey.svg)](LICENSE)
 
 *Native launcher flow for VRChat installs, profiles, instance startup, and window tiling.*
 
@@ -120,23 +120,15 @@ Using ARC-Client as the reference for how to document startup coverage, this is 
 
 ## License Direction
 
-The repository is currently licensed under `CC BY-NC-SA 4.0`, as reflected by the existing `LICENSE` file.
+This repository is licensed under the custom `ComfyChloe Non-Commercial Copyleft License 1.2`.
 
-If you want to move this project to `GNU GPL v3`, there is one important constraint:
+In practical terms, that means:
 
-- `GPLv3` allows commercial use.
-- `GPLv3` does **not** prevent someone from selling the app.
-- `GPLv3` also does **not** limit use to a private/internal audience.
+- people may view, share, and modify the code
+- people may publish fixes, forks, and contributions
+- distributed modified versions must remain under the same license
+- distributed versions must include source code
+- selling the code or redistributed builds is not allowed without separate written permission
+- closed-source redistribution is not allowed
 
-That means these two goals are incompatible in a single standard GPLv3 license:
-
-- Use GPLv3
-- Prevent sale or broader outside use
-
-If your actual goal is "source available, modifiable, but not for commercial resale or general outside use," you will need a different licensing strategy, such as:
-
-- keeping a non-commercial license
-- using a custom proprietary/source-available license
-- dual-licensing the project
-
-Until you change the `LICENSE` file, this repository should be treated as remaining under its current `CC BY-NC-SA 4.0` terms.
+This is a custom license for this repository. It is not MIT, GPL, Apache, or MPL.
