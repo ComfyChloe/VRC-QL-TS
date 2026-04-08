@@ -65,6 +65,7 @@ Technical summary: `v0.1.0` • `Vue 3 + Vite` • `Rust + Tauri 2` • `Windows
 - Node.js
 - Rust toolchain
 - Tauri 2 prerequisites for Windows
+- Microsoft Edge WebView2 runtime on Windows for the desktop app to run
 
 ### Scripts
 
@@ -115,6 +116,7 @@ Using ARC-Client as the reference for how to document startup coverage, this is 
 ## Notes On Platform Behavior
 
 - The native launch flow is currently Windows-oriented.
+- On Windows, the app runs through Tauri using Microsoft Edge WebView2 as its webview runtime.
 - Window tiling is implemented for Windows and is a no-op on non-Windows platforms.
 - The app window is currently configured as a standard resizable desktop window with a dark theme.
 
