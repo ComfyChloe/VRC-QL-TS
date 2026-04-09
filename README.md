@@ -56,6 +56,17 @@ The launcher includes a queue-based flow for starting multiple VRChat clients in
 
 When launching a batch, the app waits for VRChat to open between profiles before continuing to the next entry. If auto-layout is enabled and more than one profile is launched, the app can also tile visible VRChat windows afterward.
 
+### Profile Slots
+
+The profile slot field maps to the VRChat launch argument `--profile=N`.
+
+- `0` is the normal default or Steam-style launch path, so the launcher does not add `--profile=0`
+- `1` is the first separate profile slot
+- `2` is the second separate profile slot
+- higher numbers continue the same pattern
+
+Use different profile slot values when you want launches to stay separated from each other in their local VRChat profile data. If two launch profiles use the same slot number, they are targeting the same VRChat profile slot.
+
 ## Development
 
 Technical summary: `v0.1.0` • `Vue 3 + Vite` • `Rust + Tauri 2` • `Windows desktop`
