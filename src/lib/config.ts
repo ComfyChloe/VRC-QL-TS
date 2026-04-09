@@ -27,6 +27,7 @@ export async function loadConfig(): Promise<void> {
     appConfig.value = {
       installs:  parsed.installs  ?? defaults.installs,
       profiles:  parsed.profiles  ?? defaults.profiles,
+      queue:     parsed.queue     ?? defaults.queue,
       theme:     { ...defaults.theme,  ...(parsed.theme  ?? {}) },
       window:    { ...defaults.window, ...(parsed.window ?? {}) },
       globalOptions: { ...defaults.globalOptions, ...(parsed.globalOptions ?? {}) }

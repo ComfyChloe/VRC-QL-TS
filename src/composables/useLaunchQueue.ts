@@ -1,6 +1,6 @@
-import { computed, ref } from 'vue'
-import { appConfig } from '../lib/config'
-import type { LaunchProfile } from '../lib/types'
+import { computed } from 'vue'
+import { appConfig, saveConfig } from '../lib/config'
+import type { LaunchProfile, SavedQueueItem } from '../lib/types'
 import type { LaunchRuntimeSettings } from './useLauncher'
 
 export interface QueueItem {
@@ -11,31 +11,65 @@ export interface QueueItem {
   useGlobalOptions: boolean
 }
 
-const queue = ref<QueueItem[]>([])
+function toQueueItem(s: SavedQueueItem): QueueItem {
+  return {
+    queueId: s.queueId,
+    profileId: s.profileId,
+    runtime: { installId: s.installId, vr: s.vr },
+    enabled: s.enabled,
+    useGlobalOptions: s.useGlobalOptions
+  }
+}
+
+function fromQueueItem(q: QueueItem): SavedQueueItem {
+  return {
+    queueId: q.queueId,
+    profileId: q.profileId,
+    installId: q.runtime.installId,
+    vr: q.runtime.vr,
+    enabled: q.enabled,
+    useGlobalOptions: q.useGlobalOptions
+  }
+}
+
+// Computed view over persisted appConfig.queue
+const queue = computed<QueueItem[]>({
+  get: () => appConfig.value.queue.map(toQueueItem),
+  set: (items) => {
+    appConfig.value.queue = items.map(fromQueueItem)
+    void saveConfig()
+  }
+})
 
 export function useLaunchQueue() {
   function addToQueue(profiles: LaunchProfile[]) {
     const first = profiles[0]
     const installId = (first?.installId) || (appConfig.value.installs[0]?.id ?? '')
-    queue.value.push({
-      queueId: crypto.randomUUID(),
-      profileId: first?.id ?? '',
-      runtime: { installId, vr: first?.vr ?? false },
-      enabled: true,
-      useGlobalOptions: first?.useGlobalOptions ?? false
-    })
+    queue.value = [
+      ...queue.value,
+      {
+        queueId: crypto.randomUUID(),
+        profileId: first?.id ?? '',
+        runtime: { installId, vr: first?.vr ?? false },
+        enabled: true,
+        useGlobalOptions: first?.useGlobalOptions ?? false
+      }
+    ]
   }
 
   function setQueueProfile(queueId: string, profileId: string, profiles: LaunchProfile[]) {
-    const item = queue.value.find(i => i.queueId === queueId)
-    if (!item) return
     const profile = profiles.find(p => p.id === profileId)
-    item.profileId = profileId
-    item.runtime = {
-      installId: profile?.installId || (appConfig.value.installs[0]?.id ?? ''),
-      vr: profile?.vr ?? item.runtime.vr
-    }
-    item.useGlobalOptions = profile?.useGlobalOptions ?? false
+    queue.value = queue.value.map(item =>
+      item.queueId !== queueId ? item : {
+        ...item,
+        profileId,
+        runtime: {
+          installId: profile?.installId || (appConfig.value.installs[0]?.id ?? ''),
+          vr: profile?.vr ?? item.runtime.vr
+        },
+        useGlobalOptions: profile?.useGlobalOptions ?? false
+      }
+    )
   }
 
   function removeFromQueue(queueId: string) {
@@ -43,34 +77,39 @@ export function useLaunchQueue() {
   }
 
   function moveInQueue(queueId: string, delta: number) {
-    const idx = queue.value.findIndex(item => item.queueId === queueId)
+    const items = [...queue.value]
+    const idx = items.findIndex(item => item.queueId === queueId)
     if (idx < 0) return
     const newIdx = idx + delta
-    if (newIdx < 0 || newIdx >= queue.value.length) return
-    const items = [...queue.value]
+    if (newIdx < 0 || newIdx >= items.length) return
     ;[items[idx], items[newIdx]] = [items[newIdx], items[idx]]
     queue.value = items
   }
 
   function toggleQueueEnabled(queueId: string) {
-    const item = queue.value.find(i => i.queueId === queueId)
-    if (item) item.enabled = !item.enabled
+    queue.value = queue.value.map(item =>
+      item.queueId === queueId ? { ...item, enabled: !item.enabled } : item
+    )
   }
 
   function toggleQueueGlobal(queueId: string) {
-    const item = queue.value.find(i => i.queueId === queueId)
-    if (item) item.useGlobalOptions = !item.useGlobalOptions
+    queue.value = queue.value.map(item =>
+      item.queueId === queueId ? { ...item, useGlobalOptions: !item.useGlobalOptions } : item
+    )
   }
 
   function patchQueueRuntime(queueId: string, patch: Partial<LaunchRuntimeSettings>) {
-    const item = queue.value.find(i => i.queueId === queueId)
-    if (!item) return
     if (patch.vr) {
-      for (const i of queue.value) {
-        i.runtime = { ...i.runtime, vr: i.queueId === queueId }
-      }
+      queue.value = queue.value.map(item => ({
+        ...item,
+        runtime: { ...item.runtime, vr: item.queueId === queueId }
+      }))
     } else {
-      item.runtime = { ...item.runtime, ...patch }
+      queue.value = queue.value.map(item =>
+        item.queueId === queueId
+          ? { ...item, runtime: { ...item.runtime, ...patch } }
+          : item
+      )
     }
   }
 
@@ -88,3 +127,4 @@ export function useLaunchQueue() {
     hasEnabledItems
   }
 }
+

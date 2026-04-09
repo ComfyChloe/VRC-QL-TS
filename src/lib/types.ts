@@ -116,9 +116,19 @@ export interface GlobalLaunchOptions {
   display: DisplayOptions
 }
 
+export interface SavedQueueItem {
+  queueId: string
+  profileId: string
+  installId: string
+  vr: boolean
+  enabled: boolean
+  useGlobalOptions: boolean
+}
+
 export interface AppConfig {
   installs: VRCInstall[]
   profiles: LaunchProfile[]
+  queue: SavedQueueItem[]
   theme: AppTheme
   window: AppWindowConfig
   globalOptions: GlobalLaunchOptions
@@ -180,6 +190,7 @@ export function defaultConfig(): AppConfig {
   return {
     installs: [],
     profiles: [],
+    queue: [],
     theme: {
       accentColor: '#7c6aef',
       backgroundColor: '#161616',
