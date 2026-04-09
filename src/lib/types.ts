@@ -71,6 +71,7 @@ export interface InstanceConfig {
   type: InstanceType
   region: InstanceRegion
   joinLink: string
+  localWorld: string
 }
 
 export interface LaunchProfile {
@@ -163,7 +164,8 @@ export function defaultProfile(id: string): LaunchProfile {
       nonce: '',
       type: 'friends',
       region: 'us-w',
-      joinLink: ''
+      joinLink: '',
+      localWorld: ''
     },
     customParams: '',
     enabled: false,

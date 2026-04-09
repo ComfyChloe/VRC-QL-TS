@@ -68,7 +68,13 @@ export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides 
   if (inst.mode === 'join' && inst.joinLink.trim()) {
     args.push(normalizeJoinLink(inst.joinLink))
   }
-  // 'create' / 'local' / 'none' have no standalone CLI flags;
+  if (inst.mode === 'local') {
+    args.push('--watch-worlds')
+    if (inst.localWorld.trim()) {
+      args.push(inst.localWorld.trim())
+    }
+  }
+  // 'create' / 'none' have no standalone CLI flags;
   // the launcher constructs a vrchat:// URI which VRChat.exe
   // accepts as a positional arg when mode === 'create'.
   if (inst.mode === 'create' && inst.worldId.trim()) {

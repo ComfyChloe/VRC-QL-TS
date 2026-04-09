@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import type { InstanceConfig, InstanceMode, InstanceType, InstanceRegion } from '../lib/types'
+import { useLocalWorlds } from '../composables/useLocalWorlds'
 
 const props = defineProps<{
   modelValue: InstanceConfig
@@ -13,6 +15,12 @@ const emit = defineEmits<{
 function patch<K extends keyof InstanceConfig>(field: K, value: InstanceConfig[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
 }
+
+const { worlds, loading: worldsLoading, error: worldsError, refresh: refreshWorlds } = useLocalWorlds()
+
+watch(() => props.modelValue.mode, (mode) => {
+  if (mode === 'local') refreshWorlds()
+}, { immediate: true })
 
 const MODE_LABELS: { id: InstanceMode; label: string }[] = [
   { id: 'create', label: 'Create' },
@@ -129,11 +137,26 @@ const REGION_LABELS: { id: InstanceRegion; label: string }[] = [
       </p>
     </template>
 
-    <!-- Local mode info -->
+    <!-- Local mode fields -->
     <template v-else-if="modelValue.mode === 'local'">
-      <p class="text-sm text-secondary" style="margin-top: 8px">
-        Launches in offline local testing mode. EAC is disabled. Cannot join online instances.
-      </p>
+      <div class="field-stack">
+        <div class="local-world-header">
+          <label class="field-label">Local World</label>
+          <button class="btn btn-ghost btn-sm" type="button" :disabled="worldsLoading" @click="refreshWorlds">↻</button>
+        </div>
+        <select
+          class="input"
+          :value="modelValue.localWorld"
+          :disabled="readonly"
+          @change="patch('localWorld', ($event.target as HTMLSelectElement).value)"
+        >
+          <option value="">— Select world —</option>
+          <option v-for="w in worlds" :key="w.path" :value="w.path">{{ w.name }}</option>
+        </select>
+        <p v-if="worldsError" class="text-xs" style="color: var(--color-error)">{{ worldsError }}</p>
+        <p v-else-if="!worldsLoading && worlds.length === 0" class="text-xs text-secondary">No local worlds found. Build a world in the VRChat SDK first.</p>
+      </div>
+      <p class="text-xs text-secondary">Launches in offline local testing mode. EAC is disabled. Cannot join online instances.</p>
     </template>
 
     <!-- None mode info -->
@@ -172,5 +195,10 @@ const REGION_LABELS: { id: InstanceRegion; label: string }[] = [
   display: flex;
   flex-wrap: wrap;
   gap: $space-3;
+}
+.local-world-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 </style>
