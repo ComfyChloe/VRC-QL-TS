@@ -6,6 +6,7 @@ pub struct LocalWorld {
     pub path: String,
 }
 
+#[cfg(target_os = "windows")]
 fn worlds_dir() -> Option<PathBuf> {
     let base = std::env::var("USERPROFILE").ok()?;
     Some(
@@ -16,6 +17,43 @@ fn worlds_dir() -> Option<PathBuf> {
             .join("VRChat")
             .join("Worlds"),
     )
+}
+
+#[cfg(target_os = "linux")]
+fn worlds_dir() -> Option<PathBuf> {
+    // Under Proton, VRChat data lives inside the compatdata prefix:
+    // <steam_root>/steamapps/compatdata/438100/pfx/drive_c/users/steamuser/AppData/LocalLow/VRChat/VRChat/Worlds
+    let home = std::env::var("HOME").ok()?;
+    let home_path = PathBuf::from(&home);
+    let steam_roots = [
+        home_path.join(".steam/steam"),
+        home_path.join(".local/share/Steam"),
+        home_path.join("snap/steam/common/.local/share/Steam"),
+    ];
+    for root in &steam_roots {
+        let worlds = root
+            .join("steamapps")
+            .join("compatdata")
+            .join("438100")
+            .join("pfx")
+            .join("drive_c")
+            .join("users")
+            .join("steamuser")
+            .join("AppData")
+            .join("LocalLow")
+            .join("VRChat")
+            .join("VRChat")
+            .join("Worlds");
+        if worlds.is_dir() {
+            return Some(worlds);
+        }
+    }
+    None
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn worlds_dir() -> Option<PathBuf> {
+    None
 }
 
 fn display_name(filename: &str) -> String {
@@ -29,7 +67,7 @@ fn display_name(filename: &str) -> String {
 
 #[tauri::command]
 pub fn list_local_worlds() -> Result<Vec<LocalWorld>, String> {
-    let dir = worlds_dir().ok_or_else(|| "Could not resolve USERPROFILE".to_string())?;
+    let dir = worlds_dir().ok_or_else(|| "Could not find VRChat worlds directory".to_string())?;
     if !dir.exists() {
         return Ok(vec![]);
     }

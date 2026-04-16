@@ -1,15 +1,19 @@
 import { computed } from 'vue'
 import { open } from '@tauri-apps/plugin-dialog'
 import { appConfig, saveConfig } from '../lib/config'
+import { isLinux } from '../lib/platform'
 import type { VRCInstall } from '../lib/types'
 
 export function useInstalls() {
   const installs = computed(() => appConfig.value.installs)
 
   async function addInstall(): Promise<void> {
+    const filters = isLinux
+      ? [{ name: 'All Files', extensions: ['*'] }]
+      : [{ name: 'Executable', extensions: ['exe'] }]
     const result = await open({
-      title: 'Select VRChat.exe',
-      filters: [{ name: 'Executable', extensions: ['exe'] }],
+      title: isLinux ? 'Select VRChat.exe in Steam library' : 'Select VRChat.exe',
+      filters,
       multiple: false
     })
     if (!result || typeof result !== 'string') return

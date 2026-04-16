@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { appConfig } from '../lib/config'
+import { isLinux } from '../lib/platform'
 import { useInstalls } from '../composables/useInstalls'
 import type { VRCInstall } from '../lib/types'
 
@@ -38,7 +39,7 @@ function formatDate(iso: string | null) {
 
     <div v-if="appConfig.installs.length === 0" class="empty-state card">
       <p class="text-secondary">No VRChat installations added yet.</p>
-      <p class="text-muted text-sm">Click <strong>Add Installation</strong> to browse for VRChat.exe.</p>
+      <p class="text-muted text-sm">Click <strong>Add Installation</strong> to browse for VRChat.exe<template v-if="isLinux"> in your Steam library</template>.</p>
     </div>
 
     <div class="installs-list">

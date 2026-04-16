@@ -69,14 +69,36 @@ Use different profile slot values when you want launches to stay separated from 
 
 ## Development
 
-Technical summary: `v0.1.0` • `Vue 3 + Vite` • `Rust + Tauri 2` • `Windows desktop`
+Technical summary: `v0.1.0` • `Vue 3 + Vite` • `Rust + Tauri 2` • `Windows & Linux desktop`
 
 ### Requirements
 
 - Node.js
 - Rust toolchain
-- Tauri 2 prerequisites for Windows
-- Microsoft Edge WebView2 runtime on Windows for the desktop app to run
+- Tauri 2 prerequisites for your platform (see below)
+
+#### Windows
+
+- Microsoft Edge WebView2 runtime (for the desktop app to run)
+- Visual Studio C++ Build Tools
+
+#### Linux (Ubuntu / Debian)
+
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf
+```
+
+#### Linux (Fedora)
+
+```bash
+sudo dnf install webkit2gtk4.1-devel gtk3-devel libappindicator-gtk3-devel librsvg2-devel
+```
+
+#### Linux (Arch)
+
+```bash
+sudo pacman -S webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg
+```
 
 ### Scripts
 
@@ -91,10 +113,48 @@ npm run typecheck
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Runs the Tauri desktop app in development mode |
-| `npm run build` | Builds the production desktop bundle |
+| `npm run build` | Builds the production desktop bundle for the current platform |
+| `npm run build:linux:deb` | Builds a `.deb` package — **Linux only** |
+| `npm run build:linux:rpm` | Builds an `.rpm` package — **Linux only** |
+| `npm run build:linux:appimage` | Builds a universal `.AppImage` — **Linux only** |
 | `npm run dev:vite` | Runs only the Vite frontend dev server |
 | `npm run build:vite` | Builds only the frontend assets |
 | `npm run typecheck` | Runs `vue-tsc --noEmit` |
+
+### Building for Linux
+
+Linux packages **cannot** be cross-compiled from Windows — they must be built on a Linux machine. The GitHub Actions workflow handles this automatically.
+
+**To build Linux packages locally**, you need a Linux machine with the system dependencies installed (see [Requirements](#requirements)), then:
+
+```bash
+npm install
+npm run build                  # all formats
+npm run build:linux:appimage   # just AppImage
+```
+
+Build output is in `src-tauri/target/release/bundle/`.
+
+### GitHub Actions (Automated Builds)
+
+The included workflow at `.github/workflows/build.yml` builds both platforms automatically. No setup is needed — just push a tag.
+
+**To publish a release:**
+
+1. Push a version tag to GitHub:
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+2. GitHub Actions starts automatically — Windows and Linux build in parallel.
+3. When both finish, a **draft pre-release** appears in GitHub → Releases.
+4. Review it, add release notes if wanted, then publish.
+
+**To do a test build without a release:**
+
+Go to GitHub → Actions → `Build` → click `Run workflow`. The results are downloadable from the Actions run page for 7 days.
+
+> **Note:** Linux releases are marked as pre-release since Linux support is currently in testing.
 
 ## Developer Notes
 
@@ -113,7 +173,8 @@ Using ARC-Client as the reference for how to document startup coverage, this is 
 | `src-tauri/src/main.rs` | Native executable entry point |
 | `src-tauri/src/lib.rs` | Tauri builder, plugin registration, and command wiring |
 | `src-tauri/src/commands/launch.rs` | Launches VRChat or `launch.exe`, with optional process handoff wait |
-| `src-tauri/src/commands/window_tile.rs` | Tiles visible VRChat windows across the primary display |
+| `src-tauri/src/commands/proton.rs` | Linux-only Proton detection and VRChat launch wrapping |
+| `src-tauri/src/commands/window_tile.rs` | Tiles visible VRChat windows across the primary display (Windows only) |
 
 ### Startup Flow
 
@@ -126,10 +187,23 @@ Using ARC-Client as the reference for how to document startup coverage, this is 
 
 ## Notes On Platform Behavior
 
-- The native launch flow is currently Windows-oriented.
 - On Windows, the app runs through Tauri using Microsoft Edge WebView2 as its webview runtime.
-- Window tiling is implemented for Windows and is a no-op on non-Windows platforms.
+- On Linux, the app uses WebKitGTK as the webview runtime (not WebView2).
+- VRChat on Linux runs through Steam's Proton compatibility layer.
+- The launcher invokes Proton directly to enable multi-instance launching (Steam's CLI forces single-instance).
+- Proton is auto-detected from the Steam installation when VRChat.exe is selected.
+- Window tiling is implemented for Windows and is a no-op on Linux (documented as Windows-only for now).
 - The app window is currently configured as a standard resizable desktop window with a dark theme.
+
+### Linux Pre-Release Notes
+
+Linux support is in pre-release. Known limitations:
+
+- Window tiling (auto-layout) is not available on Linux
+- Proton auto-detection looks for VRChat's configured Proton in Steam's config.vdf, falling back to Proton - Experimental or the highest installed Proton version
+- Custom Proton builds (GE-Proton) are detected in `~/.steam/root/compatibilitytools.d/`
+- Flatpak Steam installations are not yet supported
+- VRChat must have been launched through Steam at least once before using this launcher (to create the Proton prefix/compatdata)
 
 ## License Direction
 

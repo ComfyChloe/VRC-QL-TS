@@ -29,6 +29,12 @@ icons/
 package-lock.json
 dist/
 
+!/.github/
+!/.github/workflows/
+!/.github/workflows/**
+!/src-tauri/icons/
+!/src-tauri/icons/**
+
 # Tauri / Rust
 src-tauri/target/
 src-tauri/gen/

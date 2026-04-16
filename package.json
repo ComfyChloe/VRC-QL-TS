@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
+    "build:linux:deb": "tauri build --bundles deb",
+    "build:linux:rpm": "tauri build --bundles rpm",
+    "build:linux:appimage": "tauri build --bundles appimage",
     "dev:vite": "vite",
     "build:vite": "vite build",
     "typecheck": "vue-tsc --noEmit",

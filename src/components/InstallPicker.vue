@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { appConfig } from '../lib/config'
+import { isLinux } from '../lib/platform'
 import { useInstalls } from '../composables/useInstalls'
 import type { VRCInstall } from '../lib/types'
 
@@ -51,7 +52,7 @@ async function browse() {
       {{ selectedInstall.exePath }}
     </p>
     <p v-else-if="installs.length === 0" class="picker-path text-xs text-warning">
-      No installations added yet. Click Browse to add VRChat.exe.
+      No installations added yet. Click Browse to add VRChat.exe<template v-if="isLinux"> from your Steam library</template>.
     </p>
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { appConfig, saveConfig, applyTheme } from '../lib/config'
+import { isLinux } from '../lib/platform'
 
 const DEFAULT_ACCENT = '#7c6aef'
 const DEFAULT_BACKGROUND = '#161616'
@@ -91,13 +92,15 @@ watch([rememberSize, layoutColumns], async ([rs, lc]) => {
         </label>
       </div>
       <hr class="divider" />
-      <div class="setting-row">
+      <div class="setting-row" :class="{ 'setting-disabled': isLinux }">
         <div class="field-stack">
           <span class="field-label">Auto-Layout Columns</span>
-          <span class="text-xs text-muted">Number of columns when tiling VRChat windows</span>
+          <span v-if="isLinux" class="text-xs text-muted">Window tiling is not available on Linux</span>
+          <span v-else class="text-xs text-muted">Number of columns when tiling VRChat windows</span>
         </div>
         <input
           v-model.number="layoutColumns"
+          :disabled="isLinux"
           class="input num-input"
           type="number"
           min="1"
@@ -153,6 +156,10 @@ watch([rememberSize, layoutColumns], async ([rs, lc]) => {
   align-items: center;
   justify-content: space-between;
   gap: $space-4;
+}
+.setting-disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 .colour-controls {
   display: flex;

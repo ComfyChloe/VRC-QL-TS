@@ -1,4 +1,6 @@
-use std::path::{Path, PathBuf};
+#[cfg(target_os = "windows")]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -8,6 +10,9 @@ use std::os::windows::process::CommandExt;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+#[cfg(target_os = "linux")]
+use super::proton;
 
 #[tauri::command]
 pub fn launch_instance(
@@ -21,10 +26,20 @@ pub fn launch_instance(
     } else {
         None
     };
-    let launch_path = resolve_launch_path(&exe_path);
-    #[cfg(target_os = "windows")]
+    let child = spawn_vrchat(&exe_path, &args)?;
+    if let Some(existing_count) = process_count_before {
+        wait_for_vrchat_process(existing_count, Duration::from_secs(90))?;
+    }
+    Ok(child)
+}
+
+// ── Platform-specific spawn ─────────────────────────────────────────
+
+#[cfg(target_os = "windows")]
+fn spawn_vrchat(exe_path: &str, args: &[String]) -> Result<u32, String> {
+    let launch_path = resolve_launch_path(exe_path);
     let child = Command::new(&launch_path)
-        .args(&args)
+        .args(args)
         .current_dir(
             launch_path
                 .parent()
@@ -33,9 +48,27 @@ pub fn launch_instance(
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map_err(|e| format!("Failed to launch '{}': {}", launch_path.display(), e))?;
-    #[cfg(not(target_os = "windows"))]
+    Ok(child.id())
+}
+
+#[cfg(target_os = "linux")]
+fn spawn_vrchat(exe_path: &str, args: &[String]) -> Result<u32, String> {
+    let exe = PathBuf::from(exe_path);
+    let steam_root = proton::find_steam_root(&exe).ok_or_else(|| {
+        "Could not find Steam installation. Make sure VRChat.exe is inside a Steam library folder.".to_string()
+    })?;
+    let mut cmd = proton::build_proton_command(&exe, args, &steam_root)?;
+    let child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to launch VRChat through Proton: {}", e))?;
+    Ok(child.id())
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "linux")))]
+fn spawn_vrchat(exe_path: &str, args: &[String]) -> Result<u32, String> {
+    let launch_path = PathBuf::from(exe_path);
     let child = Command::new(&launch_path)
-        .args(&args)
+        .args(args)
         .current_dir(
             launch_path
                 .parent()
@@ -43,11 +76,6 @@ pub fn launch_instance(
         )
         .spawn()
         .map_err(|e| format!("Failed to launch '{}': {}", launch_path.display(), e))?;
-
-    if let Some(existing_count) = process_count_before {
-        wait_for_vrchat_process(existing_count, Duration::from_secs(90))?;
-    }
-
     Ok(child.id())
 }
 
@@ -69,6 +97,7 @@ fn resolve_launch_path(exe_path: &str) -> PathBuf {
 }
 
 #[cfg(not(target_os = "windows"))]
+#[cfg(not(target_os = "linux"))]
 fn resolve_launch_path(exe_path: &str) -> PathBuf {
     PathBuf::from(exe_path)
 }
@@ -94,7 +123,17 @@ fn count_vrchat_processes() -> Result<usize, String> {
 
 #[cfg(not(target_os = "windows"))]
 fn count_vrchat_processes() -> Result<usize, String> {
-    Ok(0)
+    // Under Proton/Wine, the process name is "VRChat.exe"
+    let output = Command::new("pgrep")
+        .args(["-f", "VRChat.exe"])
+        .output()
+        .map_err(|e| format!("Failed to query running VRChat processes: {}", e))?;
+    // pgrep exits 1 when no processes match — that's not an error
+    if !output.status.success() {
+        return Ok(0);
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.lines().filter(|l| !l.trim().is_empty()).count())
 }
 
 #[cfg(target_os = "windows")]
@@ -110,8 +149,15 @@ fn wait_for_vrchat_process(existing_count: usize, timeout: Duration) -> Result<(
 }
 
 #[cfg(not(target_os = "windows"))]
-fn wait_for_vrchat_process(_existing_count: usize, _timeout: Duration) -> Result<(), String> {
-    Ok(())
+fn wait_for_vrchat_process(existing_count: usize, timeout: Duration) -> Result<(), String> {
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        if count_vrchat_processes()? > existing_count {
+            return Ok(());
+        }
+        sleep(Duration::from_millis(500));
+    }
+    Err("Timed out waiting for VRChat to start through Proton".to_string())
 }
 
 #[cfg(target_os = "windows")]

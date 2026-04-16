@@ -1,0 +1,153 @@
+name: Build
+
+# Triggers:
+#   - Push a version tag (v1.0.0, v0.2.1, etc.) → builds both platforms,
+#     creates a draft pre-release on GitHub with all artifacts attached.
+#   - Manual run (workflow_dispatch) → builds both platforms and uploads
+#     the packages as downloadable GitHub Actions artifacts (7-day retention).
+on:
+  push:
+    tags:
+      - 'v*'
+    # Pushing to any branch except main triggers a test build and produces
+    # downloadable artifacts (no GitHub release is created).
+    branches-ignore:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Create the GitHub release shell (tag-push only) ──────────────
+  create-release:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: 'VRC Launcher ${{ github.ref_name }}'
+          draft: true
+          prerelease: true
+          body: |
+            ## VRC Launcher ${{ github.ref_name }}
+
+            > **Linux packages are pre-release builds for testing.**
+            > Windows packages are the stable release.
+
+            ### Downloads
+
+            | Platform | File |
+            |---|---|
+            | Windows | `.exe` NSIS installer |
+            | Ubuntu / Debian | `.deb` |
+            | Fedora / openSUSE | `.rpm` |
+            | Universal Linux | `.AppImage` |
+
+            See the [README](README.md) for Linux prerequisites — Steam with Proton is required to run VRChat.
+
+  # ── Windows build ─────────────────────────────────────────────────
+  build-windows:
+    needs: create-release
+    # if: always() allows this job to run even when create-release is
+    # skipped (workflow_dispatch has no tag so create-release is skipped).
+    if: always()
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Cache compiled Rust dependencies for faster subsequent builds
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      # On tag push — upload the NSIS installer to the GitHub release
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/nsis/*.exe
+
+      # On branch push or manual run — save as a downloadable Actions artifact
+      - name: Upload artifact
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: vrc-launcher-windows
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 7
+
+  # ── Linux build ───────────────────────────────────────────────────
+  build-linux:
+    needs: create-release
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Tauri v2 system dependencies for Ubuntu / GitHub Actions runners
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      # On tag push — upload all Linux packages to the GitHub release
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+
+      # On branch push or manual run — save as downloadable Actions artifacts
+      - name: Upload artifact
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: vrc-launcher-linux
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+          retention-days: 7
