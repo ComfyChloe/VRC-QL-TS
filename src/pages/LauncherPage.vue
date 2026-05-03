@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import LaunchOptionsPanel from '../components/LaunchOptionsPanel.vue'
 import InstanceInfoPanel from '../components/InstanceInfoPanel.vue'
 import type { LaunchOptions } from '../components/LaunchOptionsPanel.vue'
@@ -62,6 +63,19 @@ const autoLayout = ref(false)
 const editingGlobal = ref(false)
 const launchError = ref('')
 const launchInfo  = ref('')
+const launchStatus = ref('')
+
+let unlistenStatus: UnlistenFn | null = null
+
+onMounted(async () => {
+  unlistenStatus = await listen<{ message: string }>('launch-status', (event) => {
+    launchStatus.value = event.payload.message
+  })
+})
+
+onBeforeUnmount(() => {
+  unlistenStatus?.()
+})
 
 const globalOptions = computed<LaunchOptions>(() => {
   const g = appConfig.value.globalOptions
@@ -121,17 +135,21 @@ async function onLaunchSingle(item: QueueItem) {
   if (!profile) return
   launchError.value = ''
   launchInfo.value  = ''
+  launchStatus.value = ''
   try {
     await launchProfile(effectiveProfile(profile, item.useGlobalOptions), item.runtime, false)
     launchInfo.value = `Launched: ${profile.name}`
   } catch (e) {
     launchError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    launchStatus.value = ''
   }
 }
 
 async function onLaunchAll() {
   launchError.value = ''
   launchInfo.value  = ''
+  launchStatus.value = ''
   const orderedEntries: LaunchQueueEntry[] = queue.value
     .filter(item => item.enabled)
     .map(item => {
@@ -141,6 +159,7 @@ async function onLaunchAll() {
     })
     .filter((e): e is LaunchQueueEntry => e !== null)
   const { launched, errors } = await launchSelected(orderedEntries, autoLayout.value)
+  launchStatus.value = ''
   if (errors.length) launchError.value = errors.join(' | ')
   else launchInfo.value = `Launched ${launched} profile(s)`
 }
@@ -190,6 +209,7 @@ const installOptions = computed(() => appConfig.value.installs)
       </div>
 
       <div v-if="launchError" class="error-banner">{{ launchError }}</div>
+      <div v-else-if="launchStatus" class="info-banner">{{ launchStatus }}</div>
       <div v-else-if="launchInfo" class="info-banner">{{ launchInfo }}</div>
 
       <div v-if="queue.length === 0" class="empty-state text-muted text-sm">

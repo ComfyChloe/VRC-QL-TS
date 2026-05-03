@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use tauri::Emitter;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -14,8 +15,19 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 #[cfg(target_os = "linux")]
 use super::proton;
 
+#[derive(Clone, serde::Serialize)]
+struct LaunchStatus {
+    message: String,
+}
+
+fn emit_status(app_handle: &tauri::AppHandle, msg: &str) {
+    let _ = app_handle.emit("launch-status", LaunchStatus { message: msg.to_string() });
+    eprintln!("[VRC Launcher] {msg}");
+}
+
 #[tauri::command]
 pub fn launch_instance(
+    app_handle: tauri::AppHandle,
     exe_path: String,
     args: Vec<String>,
     wait_for_vrchat: Option<bool>,
@@ -26,9 +38,26 @@ pub fn launch_instance(
     } else {
         None
     };
+    // Snapshot EAC launcher count before we spawn so we can wait for it to exit.
+    #[cfg(target_os = "windows")]
+    let eac_count_before = if should_wait {
+        count_launch_exe_processes().unwrap_or(0)
+    } else {
+        0
+    };
+    emit_status(&app_handle, "Spawning EAC launcher...");
     let child = spawn_vrchat(&exe_path, &args)?;
     if let Some(existing_count) = process_count_before {
+        emit_status(&app_handle, "Waiting for VRChat to start...");
         wait_for_vrchat_process(existing_count, Duration::from_secs(90))?;
+        // EAC only allows one launcher instance at a time. Wait for launch.exe to
+        // exit before returning so the next queued launch doesn't conflict.
+        #[cfg(target_os = "windows")]
+        {
+            emit_status(&app_handle, "Waiting for EAC launcher to exit...");
+            wait_for_eac_to_exit(eac_count_before, Duration::from_secs(30));
+        }
+        emit_status(&app_handle, "Ready for next launch.");
     }
     Ok(child)
 }
@@ -158,6 +187,36 @@ fn wait_for_vrchat_process(existing_count: usize, timeout: Duration) -> Result<(
         sleep(Duration::from_millis(500));
     }
     Err("Timed out waiting for VRChat to start through Proton".to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn count_launch_exe_processes() -> Result<usize, String> {
+    let output = Command::new("tasklist")
+        .args(["/FI", "IMAGENAME eq launch.exe", "/FO", "CSV", "/NH"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| format!("Failed to query EAC processes: {}", e))?;
+    if !output.status.success() {
+        return Ok(0);
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout
+        .lines()
+        .filter(|line| line.trim_start().starts_with("\"launch.exe\""))
+        .count())
+}
+
+#[cfg(target_os = "windows")]
+fn wait_for_eac_to_exit(baseline_count: usize, timeout: Duration) {
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        let current = count_launch_exe_processes().unwrap_or(0);
+        if current <= baseline_count {
+            return;
+        }
+        sleep(Duration::from_millis(500));
+    }
+    eprintln!("[VRC Launcher] EAC exit wait timed out — proceeding anyway.");
 }
 
 #[cfg(target_os = "windows")]
