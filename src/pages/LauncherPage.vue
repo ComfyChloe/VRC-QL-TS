@@ -8,6 +8,7 @@ import { appConfig, saveConfig } from '../lib/config'
 import { useProfiles } from '../composables/useProfiles'
 import { useLauncher, type LaunchQueueEntry } from '../composables/useLauncher'
 import { useLaunchQueue, type QueueItem } from '../composables/useLaunchQueue'
+import { useRecentLocations, type RecentLocation } from '../composables/useRecentLocations'
 import type { InstanceConfig, LaunchProfile } from '../lib/types'
 import { defaultProfile } from '../lib/types'
 
@@ -179,6 +180,30 @@ function onRemoveSelected() {
 }
 
 const installOptions = computed(() => appConfig.value.installs)
+const { locations: recentLocations, loading: recentLoading } = useRecentLocations()
+const selectedRecentLocation = ref('')
+watch(selectedQueueId, () => { selectedRecentLocation.value = '' })
+
+function formatRecentLocation(loc: RecentLocation): string {
+  const maxLen = 28
+  const name = loc.world_name.length > maxLen
+    ? loc.world_name.slice(0, maxLen) + '…'
+    : loc.world_name
+  if (loc.instance_type.startsWith('group')) {
+    const grp = loc.group_name ?? loc.instance_type
+    return `${name} (#${loc.instance_id}) · ${grp}`
+  }
+  const parts = [name, `#${loc.instance_id}`, loc.instance_type]
+  if (loc.region) parts.push(loc.region)
+  return parts.join(' · ')
+}
+
+function onRecentLocationPicked(rawLocation: string) {
+  if (!selectedEditor.value || !rawLocation) return
+  selectedRecentLocation.value = rawLocation
+  const blank = defaultProfile('__blank__').instance
+  selectedEditor.value.instance = { ...blank, mode: 'join', joinLink: rawLocation }
+}
 </script>
 
 <template>
@@ -275,7 +300,20 @@ const installOptions = computed(() => appConfig.value.installs)
     </div>
 
     <div class="card section-card">
-      <p class="panel-title">Instance Info</p>
+      <div class="section-header">
+        <p class="panel-title">Instance Info</p>
+        <select
+          class="input queue-install recent-instance-select"
+          :disabled="!selectedEditor || recentLoading"
+          :value="selectedRecentLocation"
+          @change="onRecentLocationPicked(($event.target as HTMLSelectElement).value)"
+        >
+          <option value="" disabled>{{ recentLoading ? 'Loading…' : '— Recent Instances —' }}</option>
+          <option v-for="loc in recentLocations" :key="loc.raw_location" :value="loc.raw_location">
+            {{ formatRecentLocation(loc) }}
+          </option>
+        </select>
+      </div>
       <InstanceInfoPanel
         :model-value="selectedEditor?.instance ?? defaultProfile('__blank__').instance"
         :readonly="!selectedEditor"
@@ -327,7 +365,8 @@ const installOptions = computed(() => appConfig.value.installs)
   gap: $space-3;
   flex-shrink: 0;
 }
-.section-header { display: flex; justify-content: space-between; gap: $space-3; }
+.section-header { display: flex; justify-content: space-between; align-items: center; gap: $space-3; }
+.recent-instance-select { max-width: 280px; flex-shrink: 0; }
 .queue-toolbar {
   display: flex;
   align-items: center;
