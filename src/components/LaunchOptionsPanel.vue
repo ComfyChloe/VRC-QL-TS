@@ -3,6 +3,7 @@ import type {
   DebugOptions, CreatorOptions, PerformanceOptions,
   IkOptions, SystemOptions, DisplayOptions
 } from '../lib/types'
+import AffinityPicker from './AffinityPicker.vue'
 
 export interface LaunchOptions {
   debug: DebugOptions
@@ -139,12 +140,11 @@ function numOrNull(v: string): number | null {
             :value="modelValue.performance.maxFps ?? ''" :disabled="readonly"
             @blur="patchPerf('maxFps', numOrNull(($event.target as HTMLInputElement).value))" />
         </div>
-        <div class="field-stack">
-          <label class="field-label">Affinity (hex)</label>
-          <input class="input" type="text" placeholder="e.g. FFFF"
-            :value="modelValue.performance.affinity" :disabled="readonly"
-            @input="patchPerf('affinity', ($event.target as HTMLInputElement).value)" />
-        </div>
+        <AffinityPicker
+          :model-value="modelValue.performance.affinity"
+          :disabled="readonly"
+          @update:model-value="patchPerf('affinity', $event)"
+        />
       </div>
       <div class="inline-fields">
         <div class="field-stack">
