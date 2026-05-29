@@ -9,7 +9,7 @@ export interface LaunchArgOverrides {
   vr?: boolean
 }
 
-const JOIN_LINK_PREFIX = 'vrchat://launch?worldId='
+const JOIN_LINK_PREFIX = 'vrchat://launch?id='
 
 export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides = {}): string[] {
   const args: string[] = []
@@ -101,7 +101,7 @@ export function buildCommandPreview(exePath: string, profile: LaunchProfile): st
 function normalizeJoinLink(joinLink: string): string {
   const trimmed = joinLink.trim()
   if (!trimmed) return ''
-  if (/^vrchat:\/\/launch\?worldid=/i.test(trimmed)) {
+  if (/^vrchat:\/\/launch\?/i.test(trimmed)) {
     return trimmed
   }
   return `${JOIN_LINK_PREFIX}${trimmed}`

@@ -302,17 +302,20 @@ function onRecentLocationPicked(rawLocation: string) {
     <div class="card section-card">
       <div class="section-header">
         <p class="panel-title">Instance Info</p>
-        <select
-          class="input queue-install recent-instance-select"
-          :disabled="!selectedEditor || recentLoading"
-          :value="selectedRecentLocation"
-          @change="onRecentLocationPicked(($event.target as HTMLSelectElement).value)"
-        >
-          <option value="" disabled>{{ recentLoading ? 'Loading…' : '— Recent Instances —' }}</option>
-          <option v-for="loc in recentLocations" :key="loc.raw_location" :value="loc.raw_location">
-            {{ formatRecentLocation(loc) }}
-          </option>
-        </select>
+        <div class="recent-instance-control">
+          <select
+            class="input queue-install recent-instance-select"
+            :disabled="!selectedEditor || recentLoading"
+            :value="selectedRecentLocation"
+            @change="onRecentLocationPicked(($event.target as HTMLSelectElement).value)"
+          >
+            <option value="" disabled>{{ recentLoading ? 'Loading…' : '— Recent Instances —' }}</option>
+            <option v-for="loc in recentLocations" :key="loc.raw_location" :value="loc.raw_location">
+              {{ formatRecentLocation(loc) }}
+            </option>
+          </select>
+          <span class="text-xs text-secondary recent-order-hint">newest at top ↓</span>
+        </div>
       </div>
       <InstanceInfoPanel
         :model-value="selectedEditor?.instance ?? defaultProfile('__blank__').instance"
@@ -366,7 +369,9 @@ function onRecentLocationPicked(rawLocation: string) {
   flex-shrink: 0;
 }
 .section-header { display: flex; justify-content: space-between; align-items: center; gap: $space-3; }
-.recent-instance-select { max-width: 280px; flex-shrink: 0; }
+.recent-instance-control { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.recent-instance-select { max-width: 280px; }
+.recent-order-hint { color: var(--color-text-muted); }
 .queue-toolbar {
   display: flex;
   align-items: center;

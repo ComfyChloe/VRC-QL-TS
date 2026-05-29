@@ -213,7 +213,7 @@ fn parse_logs(limit: usize) -> Vec<RecentLocation> {
             .collect(),
         Err(_) => return vec![],
     };
-    log_files.sort_by(|a, b| b.cmp(a));
+    log_files.sort_by(|a, b| a.cmp(b)); // oldest file first — reverse() at end gives newest-first globally
     let mut results: Vec<RecentLocation> = Vec::new();
     for file in log_files {
         if results.len() >= limit * 4 {
