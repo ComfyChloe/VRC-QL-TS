@@ -180,7 +180,7 @@ function onRemoveSelected() {
 }
 
 const installOptions = computed(() => appConfig.value.installs)
-const { locations: recentLocations, loading: recentLoading } = useRecentLocations()
+const { locations: recentLocations, loading: recentLoading, refresh: refreshRecent } = useRecentLocations()
 const selectedRecentLocation = ref('')
 watch(selectedQueueId, () => { selectedRecentLocation.value = '' })
 
@@ -307,6 +307,7 @@ function onRecentLocationPicked(rawLocation: string) {
             class="input queue-install recent-instance-select"
             :disabled="!selectedEditor || recentLoading"
             :value="selectedRecentLocation"
+            @focus="refreshRecent"
             @change="onRecentLocationPicked(($event.target as HTMLSelectElement).value)"
           >
             <option value="" disabled>{{ recentLoading ? 'Loading…' : '— Recent Instances —' }}</option>
