@@ -34,10 +34,7 @@ const selectedProfile = computed<LaunchProfile | null>(() => {
   return item ? resolveProfile(item) : null
 })
 
-watch(() => ({
-  id: selectedProfile.value?.id,
-  updatedAt: selectedProfile.value?.updatedAt
-}), () => {
+watch(() => selectedProfile.value?.id, () => {
   const profile = selectedProfile.value
   syncSelectedEditor = true
   selectedEditor.value = profile ? JSON.parse(JSON.stringify(profile)) as LaunchProfile : null
