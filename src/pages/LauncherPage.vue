@@ -180,9 +180,9 @@ function onRemoveSelected() {
 }
 
 const installOptions = computed(() => appConfig.value.installs)
-const { locations: recentLocations, loading: recentLoading, refresh: refreshRecent } = useRecentLocations()
+const { locations: recentLocations, loading: recentLoading, error: recentError, refresh: refreshRecent } = useRecentLocations()
 const selectedRecentLocation = ref('')
-watch(selectedQueueId, () => { selectedRecentLocation.value = '' })
+watch(selectedQueueId, () => { selectedRecentLocation.value = ''; refreshRecent() })
 
 function formatRecentLocation(loc: RecentLocation): string {
   const maxLen = 28
@@ -305,7 +305,7 @@ function onRecentLocationPicked(rawLocation: string) {
         <div class="recent-instance-control">
           <select
             class="input queue-install recent-instance-select"
-            :disabled="!selectedEditor || recentLoading"
+            :disabled="!selectedEditor"
             :value="selectedRecentLocation"
             @focus="refreshRecent"
             @change="onRecentLocationPicked(($event.target as HTMLSelectElement).value)"
@@ -316,6 +316,7 @@ function onRecentLocationPicked(rawLocation: string) {
             </option>
           </select>
           <span class="text-xs text-secondary recent-order-hint">newest at top ↓</span>
+          <span v-if="recentError" class="text-xs" style="color:var(--color-danger)">{{ recentError }}</span>
         </div>
       </div>
       <InstanceInfoPanel

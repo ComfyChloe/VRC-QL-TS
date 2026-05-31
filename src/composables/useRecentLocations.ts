@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 export interface RecentLocation {
@@ -30,6 +30,9 @@ export function useRecentLocations() {
   }
 
   refresh()
+
+  const pollTimer = setInterval(refresh, 60_000)
+  onUnmounted(() => clearInterval(pollTimer))
 
   return { locations, loading, error, refresh }
 }
