@@ -58,10 +58,19 @@ const blankOptions = computed<LaunchOptions>(() => {
 })
 
 const autoLayout = ref(false)
+const streamerMode = ref(false)
 const editingGlobal = ref(false)
 const launchError = ref('')
 const launchInfo  = ref('')
 const launchStatus = ref('')
+
+function maskName(name: string): string {
+  if (!streamerMode.value) return name
+  return name.split(' ').map(word => {
+    if (word.length <= 4) return word
+    return word.slice(0, 2) + '*'.repeat(word.length - 4) + word.slice(-2)
+  }).join(' ')
+}
 
 let unlistenStatus: UnlistenFn | null = null
 
@@ -136,7 +145,7 @@ async function onLaunchSingle(item: QueueItem) {
   launchStatus.value = ''
   try {
     await launchProfile(effectiveProfile(profile, item.useGlobalOptions), item.runtime, false)
-    launchInfo.value = `Launched: ${profile.name}`
+    launchInfo.value = `Launched: ${maskName(profile.name)}`
   } catch (e) {
     launchError.value = e instanceof Error ? e.message : String(e)
   } finally {
@@ -214,6 +223,10 @@ function onRecentLocationPicked(rawLocation: string) {
         </div>
         <div class="queue-toolbar">
           <label class="checkbox-row">
+            <input v-model="streamerMode" type="checkbox" />
+            <span>Streamer mode</span>
+          </label>
+          <label class="checkbox-row">
             <input v-model="autoLayout" type="checkbox" />
             <span>Auto-layout</span>
           </label>
@@ -258,7 +271,7 @@ function onRecentLocationPicked(rawLocation: string) {
               @change="setQueueProfile(item.queueId, ($event.target as HTMLSelectElement).value, profiles)"
             >
               <option value="">— No profile —</option>
-              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+              <option v-for="p in profiles" :key="p.id" :value="p.id">{{ maskName(p.name) }}</option>
             </select>
             <div v-if="resolveProfile(item)?.description" class="queue-meta text-xs text-secondary">{{ resolveProfile(item)?.description }}</div>
           </div>
@@ -367,7 +380,7 @@ function onRecentLocationPicked(rawLocation: string) {
   gap: $space-3;
   flex-shrink: 0;
 }
-.section-header { display: flex; justify-content: space-between; align-items: center; gap: $space-3; }
+.section-header { display: flex; justify-content: space-between; align-items: center; gap: $space-3; flex-wrap: wrap; }
 .recent-instance-control { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .recent-instance-select { max-width: 280px; }
 .recent-order-hint { color: var(--color-text-muted); }
@@ -377,6 +390,7 @@ function onRecentLocationPicked(rawLocation: string) {
   justify-content: flex-end;
   gap: $space-3;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .queue-list {
   display: flex;
@@ -413,6 +427,13 @@ function onRecentLocationPicked(rawLocation: string) {
   align-items: center;
   gap: $space-1;
   justify-self: end;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  cursor: pointer;
+  user-select: none;
 }
 .global-toggle {
   font-size: $font-size-xs;
