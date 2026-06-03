@@ -66,9 +66,9 @@ const launchStatus = ref('')
 
 function maskName(name: string): string {
   if (!streamerMode.value) return name
-  return name.split(' ').map(word => {
-    if (word.length <= 4) return word
-    return word.slice(0, 2) + '*'.repeat(word.length - 4) + word.slice(-2)
+  return name.split(' ').map((word, i) => {
+    if (i === 0) return word.length <= 2 ? word : word.slice(0, 2) + '***'
+    return '*****'
   }).join(' ')
 }
 
