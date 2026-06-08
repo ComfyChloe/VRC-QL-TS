@@ -132,6 +132,7 @@ export interface AppConfig {
   theme: AppTheme
   window: AppWindowConfig
   globalOptions: GlobalLaunchOptions
+  streamerMode: boolean
 }
 
 // ── Default factory functions ────────────────────────────────
@@ -198,6 +199,7 @@ export function defaultConfig(): AppConfig {
     },
     window: { rememberSize: true, autoLayoutColumns: 2 },
     globalOptions: {
+      streamerMode: false,
       debug: blank.debug,
       creator: blank.creator,
       performance: blank.performance,

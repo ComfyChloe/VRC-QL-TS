@@ -58,11 +58,13 @@ const blankOptions = computed<LaunchOptions>(() => {
 })
 
 const autoLayout = ref(false)
-const streamerMode = ref(false)
+const streamerMode = ref(appConfig.value.streamerMode)
 const editingGlobal = ref(false)
 const launchError = ref('')
 const launchInfo  = ref('')
 const launchStatus = ref('')
+
+watch(streamerMode, (val) => { appConfig.value.streamerMode = val; void saveConfig() })
 
 function maskName(name: string): string {
   if (!streamerMode.value) return name

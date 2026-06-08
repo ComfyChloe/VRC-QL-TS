@@ -30,7 +30,8 @@ export async function loadConfig(): Promise<void> {
       queue:     parsed.queue     ?? defaults.queue,
       theme:     { ...defaults.theme,  ...(parsed.theme  ?? {}) },
       window:    { ...defaults.window, ...(parsed.window ?? {}) },
-      globalOptions: { ...defaults.globalOptions, ...(parsed.globalOptions ?? {}) }
+      globalOptions: { ...defaults.globalOptions, ...(parsed.globalOptions ?? {}) },
+      streamerMode: parsed.streamerMode ?? defaults.streamerMode
     }
   } catch (e) {
     console.error('Failed to load config:', e)
