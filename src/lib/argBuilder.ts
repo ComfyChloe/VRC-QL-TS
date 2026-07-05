@@ -47,7 +47,8 @@ export function buildArgs(profile: LaunchProfile, overrides: LaunchArgOverrides 
   if (ik.legacyFbtCalibrate)          args.push('--legacyfbt-calibrate')
   if (ik.disableShoulderTracking)     args.push('--disable-shoulder-tracking')
   if (ik.freezeTrackingOnDisconnect)  args.push('--freeze-tracking-on-disconnect')
-  if (ik.customArmRatio.trim())       args.push(`--custom-arm-ratio="${ik.customArmRatio.trim()}"`)
+  // No shell involved — embedded quotes would reach VRChat literally and break the flag
+  if (ik.customArmRatio.trim())       args.push(`--custom-arm-ratio=${ik.customArmRatio.trim()}`)
 
   // ── System ────────────────────────────────────────────────
   const s = profile.system

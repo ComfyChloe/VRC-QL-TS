@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import ProfileDetailPanel from '../components/ProfileDetailPanel.vue'
 import { useProfiles } from '../composables/useProfiles'
+import { maskName } from '../lib/streamer'
 import type { LaunchProfile } from '../lib/types'
 
 const { profiles, addProfile, updateProfile, removeProfile, duplicateProfile, moveProfile } = useProfiles()
@@ -73,7 +74,7 @@ async function onDelete(id: string) {
       >
         <span class="order-number">{{ index + 1 }}</span>
         <span class="profile-copy">
-          <span class="profile-name">{{ profile.name }}</span>
+          <span class="profile-name">{{ maskName(profile.name) }}</span>
           <span class="profile-desc">{{ profile.description || 'No description' }}</span>
         </span>
         <span class="move-buttons" @click.stop>

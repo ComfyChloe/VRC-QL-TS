@@ -5,6 +5,7 @@ import LaunchOptionsPanel from '../components/LaunchOptionsPanel.vue'
 import InstanceInfoPanel from '../components/InstanceInfoPanel.vue'
 import type { LaunchOptions } from '../components/LaunchOptionsPanel.vue'
 import { appConfig, saveConfig } from '../lib/config'
+import { streamerMode, maskName } from '../lib/streamer'
 import { useProfiles } from '../composables/useProfiles'
 import { useLauncher, type LaunchQueueEntry } from '../composables/useLauncher'
 import { useLaunchQueue, type QueueItem } from '../composables/useLaunchQueue'
@@ -58,21 +59,10 @@ const blankOptions = computed<LaunchOptions>(() => {
 })
 
 const autoLayout = ref(false)
-const streamerMode = ref(appConfig.value.streamerMode)
 const editingGlobal = ref(false)
 const launchError = ref('')
 const launchInfo  = ref('')
 const launchStatus = ref('')
-
-watch(streamerMode, (val) => { appConfig.value.streamerMode = val; void saveConfig() })
-
-function maskName(name: string): string {
-  if (!streamerMode.value) return name
-  return name.split(' ').map((word, i) => {
-    if (i === 0) return word.length <= 2 ? word : word.slice(0, 2) + '***'
-    return '*****'
-  }).join(' ')
-}
 
 let unlistenStatus: UnlistenFn | null = null
 
@@ -197,11 +187,13 @@ function formatRecentLocation(loc: RecentLocation): string {
   const name = loc.world_name.length > maxLen
     ? loc.world_name.slice(0, maxLen) + '…'
     : loc.world_name
+  // Instance IDs and group names are join-snipeable — hide them in streamer mode
+  const instId = streamerMode.value ? '•••' : loc.instance_id
   if (loc.instance_type.startsWith('group')) {
-    const grp = loc.group_name ?? loc.instance_type
-    return `${name} (#${loc.instance_id}) · ${grp}`
+    const grp = maskName(loc.group_name ?? loc.instance_type)
+    return `${name} (#${instId}) · ${grp}`
   }
-  const parts = [name, `#${loc.instance_id}`, loc.instance_type]
+  const parts = [name, `#${instId}`, loc.instance_type]
   if (loc.region) parts.push(loc.region)
   return parts.join(' · ')
 }

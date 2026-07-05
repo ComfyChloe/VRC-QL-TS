@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { streamerMode } from '../lib/streamer'
 import type { LaunchProfile } from '../lib/types'
 
 const props = defineProps<{
@@ -50,7 +51,13 @@ function save() {
       <div class="header-top">
         <div class="field-stack header-name">
           <label class="field-label">Name</label>
-          <input v-model="local.name" class="input" type="text" placeholder="Profile name" />
+          <input
+            v-model="local.name"
+            class="input"
+            :class="{ 'streamer-blur': streamerMode }"
+            type="text"
+            placeholder="Profile name"
+          />
         </div>
         <div class="field-stack header-slot">
           <label class="field-label">Profile Slot (--profile=N)</label>
@@ -111,6 +118,11 @@ function save() {
   }
 }
 .header-name { min-width: 0; }
+// Editable field: masking the value would save the mask into the profile,
+// so blur it instead and reveal only while focused.
+.streamer-blur:not(:focus) {
+  filter: blur(4px);
+}
 .header-slot { min-width: 0; }
 .profile-note {
   padding: $space-2 $space-3;

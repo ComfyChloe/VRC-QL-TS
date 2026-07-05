@@ -198,8 +198,8 @@ export function defaultConfig(): AppConfig {
       surfaceColor: '#202020'
     },
     window: { rememberSize: true, autoLayoutColumns: 2 },
+    streamerMode: false,
     globalOptions: {
-      streamerMode: false,
       debug: blank.debug,
       creator: blank.creator,
       performance: blank.performance,

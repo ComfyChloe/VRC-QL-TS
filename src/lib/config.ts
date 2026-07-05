@@ -10,7 +10,7 @@
 import { ref } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
-import { type AppConfig, type AppTheme, defaultConfig } from './types'
+import { type AppConfig, type AppTheme, type LaunchProfile, defaultConfig, defaultProfile } from './types'
 
 const CONFIG_DIR  = 'vrc-launcher'
 const CONFIG_FILE = 'vrc-launcher/config.json'
@@ -26,7 +26,9 @@ export async function loadConfig(): Promise<void> {
     const defaults = defaultConfig()
     appConfig.value = {
       installs:  parsed.installs  ?? defaults.installs,
-      profiles:  parsed.profiles  ?? defaults.profiles,
+      // Backfill fields added since the profile was saved — a profile missing
+      // e.g. `tags` or `useGlobalOptions` breaks the editor UI at runtime.
+      profiles:  (parsed.profiles ?? defaults.profiles).map(normalizeProfile),
       queue:     parsed.queue     ?? defaults.queue,
       theme:     { ...defaults.theme,  ...(parsed.theme  ?? {}) },
       window:    { ...defaults.window, ...(parsed.window ?? {}) },
@@ -36,6 +38,10 @@ export async function loadConfig(): Promise<void> {
   } catch (e) {
     console.error('Failed to load config:', e)
   }
+}
+
+function normalizeProfile(p: Partial<LaunchProfile>): LaunchProfile {
+  return { ...defaultProfile(p.id ?? crypto.randomUUID()), ...p }
 }
 
 export async function saveConfig(): Promise<void> {
